@@ -6,15 +6,26 @@ import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { useRouter } from "next/navigation";
 import { LogIn } from "lucide-react";
+import { useAppDispatch, useAppSelector } from "@/redux/hooks";
+import { login } from "@/redux/slices/authSlice";
+import { toast } from "sonner";
 
 export function Login() {
   const router = useRouter();
+  const dispatch = useAppDispatch();
+  const { loading, error } = useAppSelector((state) => state.auth);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    router.push("/dashboard");
+    try {
+      await dispatch(login({ email, password })).unwrap();
+      toast.success("Login successful!");
+      router.push("/dashboard");
+    } catch (err: any) {
+      toast.error(err.message || "Login failed");
+    }
   };
 
   return (
@@ -48,9 +59,10 @@ export function Login() {
                 required
               />
             </div>
-            <Button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700">
+            {error && <p className="text-red-500 text-sm">{error}</p>}
+            <Button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700" disabled={loading}>
               <LogIn className="w-4 h-4 mr-2" />
-              Sign In
+              {loading ? "Signing in..." : "Sign In"}
             </Button>
           </form>
         </CardContent>

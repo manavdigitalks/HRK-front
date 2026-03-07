@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -8,45 +8,78 @@ import { Plus, Edit, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
 import { Badge } from "../components/ui/badge";
 import { toast } from "sonner";
-
-const mockEntries = [
-  { id: 1, date: "2024-01-15", supplier: "ABC Textiles", invoice: "INV-001", items: 5, total: 25000, status: "Completed" },
-  { id: 2, date: "2024-01-14", supplier: "XYZ Fabrics", invoice: "INV-002", items: 3, total: 15000, status: "Pending" },
-];
+import { useAppDispatch, useAppSelector } from "@/redux/hooks";
+import { fetchAllStocks, createStock, updateStock, deleteStock } from "@/redux/slices/stockSlice";
 
 export function StockEntry() {
-  const [entries, setEntries] = useState(mockEntries);
+  const dispatch = useAppDispatch();
+  const { stocks, loading } = useAppSelector((state) => state.stock);
   const [isOpen, setIsOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<any>(null);
-  const [formData, setFormData] = useState({ date: "", supplier: "", invoice: "", items: 0, total: 0, status: "Pending" });
+  const [formData, setFormData] = useState({ 
+    entryDate: new Date().toISOString().split('T')[0], 
+    supplier: "", 
+    invoiceNumber: "", 
+    items: [], 
+    totalAmount: 0, 
+    status: "Pending" 
+  });
+
+  useEffect(() => {
+    dispatch(fetchAllStocks());
+  }, [dispatch]);
 
   const handleAdd = () => {
     setEditingEntry(null);
-    setFormData({ date: new Date().toISOString().split('T')[0], supplier: "", invoice: "", items: 0, total: 0, status: "Pending" });
+    setFormData({ 
+      entryDate: new Date().toISOString().split('T')[0], 
+      supplier: "", 
+      invoiceNumber: "", 
+      items: [], 
+      totalAmount: 0, 
+      status: "Pending" 
+    });
     setIsOpen(true);
   };
 
   const handleEdit = (entry: any) => {
     setEditingEntry(entry);
-    setFormData(entry);
+    setFormData({
+      entryDate: entry.entryDate?.split('T')[0] || "",
+      supplier: entry.supplier,
+      invoiceNumber: entry.invoiceNumber,
+      items: entry.items,
+      totalAmount: entry.totalAmount,
+      status: entry.status
+    });
     setIsOpen(true);
   };
 
-  const handleSave = () => {
-    if (editingEntry) {
-      setEntries(entries.map(e => e.id === editingEntry.id ? { ...formData, id: e.id } : e));
-      toast.success("Entry updated!");
-    } else {
-      setEntries([...entries, { ...formData, id: Date.now() }]);
-      toast.success("Entry created!");
+  const handleSave = async () => {
+    try {
+      if (editingEntry) {
+        await dispatch(updateStock({ id: editingEntry._id, data: formData })).unwrap();
+        toast.success("Entry updated!");
+      } else {
+        await dispatch(createStock(formData)).unwrap();
+        toast.success("Entry created!");
+      }
+      setIsOpen(false);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to save entry");
     }
-    setIsOpen(false);
   };
 
-  const handleDelete = (id: number) => {
-    setEntries(entries.filter(e => e.id !== id));
-    toast.success("Entry deleted!");
+  const handleDelete = async (id: string) => {
+    try {
+      await dispatch(deleteStock(id)).unwrap();
+      toast.success("Entry deleted!");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete entry");
+    }
   };
+
+  if (loading) return <div className="p-6">Loading...</div>;
 
   return (
     <div className="p-4 lg:p-6 space-y-6">
@@ -63,7 +96,7 @@ export function StockEntry() {
 
       <Card>
         <CardHeader>
-          <CardTitle>All Stock Entries ({entries.length})</CardTitle>
+          <CardTitle>All Stock Entries ({stocks.length})</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -73,20 +106,18 @@ export function StockEntry() {
                   <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Date</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Supplier</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Invoice</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Items</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Total</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Status</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {entries.map((entry) => (
-                  <tr key={entry.id} className="border-b hover:bg-gray-50">
-                    <td className="py-3 px-4">{entry.date}</td>
+                {stocks.map((entry: any) => (
+                  <tr key={entry._id} className="border-b hover:bg-gray-50">
+                    <td className="py-3 px-4">{entry.entryDate?.split('T')[0]}</td>
                     <td className="py-3 px-4">{entry.supplier}</td>
-                    <td className="py-3 px-4 font-medium">{entry.invoice}</td>
-                    <td className="py-3 px-4">{entry.items}</td>
-                    <td className="py-3 px-4 font-medium">₹{entry.total}</td>
+                    <td className="py-3 px-4 font-medium">{entry.invoiceNumber}</td>
+                    <td className="py-3 px-4 font-medium">₹{entry.totalAmount}</td>
                     <td className="py-3 px-4">
                       <Badge variant={entry.status === "Completed" ? "default" : "secondary"}>
                         {entry.status}
@@ -97,7 +128,7 @@ export function StockEntry() {
                         <Button onClick={() => handleEdit(entry)} variant="ghost" size="sm">
                           <Edit className="w-4 h-4" />
                         </Button>
-                        <Button onClick={() => handleDelete(entry.id)} variant="ghost" size="sm">
+                        <Button onClick={() => handleDelete(entry._id)} variant="ghost" size="sm">
                           <Trash2 className="w-4 h-4 text-red-600" />
                         </Button>
                       </div>
@@ -118,7 +149,7 @@ export function StockEntry() {
           <div className="space-y-4 pt-4">
             <div className="space-y-2">
               <Label>Entry Date</Label>
-              <Input type="date" value={formData.date} onChange={(e) => setFormData({...formData, date: e.target.value})} />
+              <Input type="date" value={formData.entryDate} onChange={(e) => setFormData({...formData, entryDate: e.target.value})} />
             </div>
             <div className="space-y-2">
               <Label>Supplier</Label>
@@ -126,17 +157,11 @@ export function StockEntry() {
             </div>
             <div className="space-y-2">
               <Label>Invoice Number</Label>
-              <Input value={formData.invoice} onChange={(e) => setFormData({...formData, invoice: e.target.value})} />
+              <Input value={formData.invoiceNumber} onChange={(e) => setFormData({...formData, invoiceNumber: e.target.value})} />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Items</Label>
-                <Input type="number" value={formData.items} onChange={(e) => setFormData({...formData, items: +e.target.value})} />
-              </div>
-              <div className="space-y-2">
-                <Label>Total Amount</Label>
-                <Input type="number" value={formData.total} onChange={(e) => setFormData({...formData, total: +e.target.value})} />
-              </div>
+            <div className="space-y-2">
+              <Label>Total Amount</Label>
+              <Input type="number" value={formData.totalAmount} onChange={(e) => setFormData({...formData, totalAmount: +e.target.value})} />
             </div>
             <div className="space-y-2">
               <Label>Status</Label>

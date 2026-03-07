@@ -1,58 +1,68 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
-import { Badge } from "../components/ui/badge";
 import { Search, Plus, Edit, Trash2, User } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
 import { toast } from "sonner";
-
-const mockCustomers = [
-  { id: 1, name: "Rajesh Kumar", phone: "9876543210", email: "rajesh@email.com", totalPurchase: 45000, visits: 12 },
-  { id: 2, name: "Priya Sharma", phone: "9876543211", email: "priya@email.com", totalPurchase: 32000, visits: 8 },
-  { id: 3, name: "Amit Patel", phone: "9876543212", email: "amit@email.com", totalPurchase: 67000, visits: 15 },
-];
+import { useAppDispatch, useAppSelector } from "@/redux/hooks";
+import { fetchAllCustomers, createCustomer, updateCustomer, deleteCustomer } from "@/redux/slices/customerSlice";
 
 export function Customers() {
-  const [customers, setCustomers] = useState(mockCustomers);
+  const dispatch = useAppDispatch();
+  const { customers, loading } = useAppSelector((state) => state.customer);
   const [searchTerm, setSearchTerm] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<any>(null);
-  const [formData, setFormData] = useState({ name: "", phone: "", email: "", totalPurchase: 0, visits: 0 });
+  const [formData, setFormData] = useState({ name: "", phone: "", email: "" });
+
+  useEffect(() => {
+    dispatch(fetchAllCustomers());
+  }, [dispatch]);
 
   const filteredCustomers = customers.filter(
-    (c) => c.name.toLowerCase().includes(searchTerm.toLowerCase()) || c.phone.includes(searchTerm)
+    (c: any) => c.name?.toLowerCase().includes(searchTerm.toLowerCase()) || c.phone?.includes(searchTerm)
   );
 
   const handleAdd = () => {
     setEditingCustomer(null);
-    setFormData({ name: "", phone: "", email: "", totalPurchase: 0, visits: 0 });
+    setFormData({ name: "", phone: "", email: "" });
     setIsOpen(true);
   };
 
   const handleEdit = (customer: any) => {
     setEditingCustomer(customer);
-    setFormData(customer);
+    setFormData({ name: customer.name, phone: customer.phone, email: customer.email });
     setIsOpen(true);
   };
 
-  const handleSave = () => {
-    if (editingCustomer) {
-      setCustomers(customers.map(c => c.id === editingCustomer.id ? { ...formData, id: c.id } : c));
-      toast.success("Customer updated!");
-    } else {
-      setCustomers([...customers, { ...formData, id: Date.now() }]);
-      toast.success("Customer added!");
+  const handleSave = async () => {
+    try {
+      if (editingCustomer) {
+        await dispatch(updateCustomer({ id: editingCustomer._id, data: formData })).unwrap();
+        toast.success("Customer updated!");
+      } else {
+        await dispatch(createCustomer(formData)).unwrap();
+        toast.success("Customer added!");
+      }
+      setIsOpen(false);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to save customer");
     }
-    setIsOpen(false);
   };
 
-  const handleDelete = (id: number) => {
-    setCustomers(customers.filter(c => c.id !== id));
-    toast.success("Customer deleted!");
+  const handleDelete = async (id: string) => {
+    try {
+      await dispatch(deleteCustomer(id)).unwrap();
+      toast.success("Customer deleted!");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete customer");
+    }
   };
+
+  if (loading) return <div className="p-6">Loading...</div>;
 
   return (
     <div className="p-4 lg:p-6 space-y-6">
@@ -89,14 +99,12 @@ export function Customers() {
                   <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Customer</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Phone</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Email</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Total Purchase</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Visits</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredCustomers.map((customer) => (
-                  <tr key={customer.id} className="border-b hover:bg-gray-50">
+                {filteredCustomers.map((customer: any) => (
+                  <tr key={customer._id} className="border-b hover:bg-gray-50">
                     <td className="py-3 px-4">
                       <div className="flex items-center space-x-3">
                         <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
@@ -107,16 +115,12 @@ export function Customers() {
                     </td>
                     <td className="py-3 px-4">{customer.phone}</td>
                     <td className="py-3 px-4">{customer.email}</td>
-                    <td className="py-3 px-4 font-medium">₹{customer.totalPurchase.toLocaleString()}</td>
-                    <td className="py-3 px-4">
-                      <Badge variant="outline">{customer.visits} visits</Badge>
-                    </td>
                     <td className="py-3 px-4">
                       <div className="flex items-center space-x-2">
                         <Button onClick={() => handleEdit(customer)} variant="ghost" size="icon">
                           <Edit className="w-4 h-4" />
                         </Button>
-                        <Button onClick={() => handleDelete(customer.id)} variant="ghost" size="icon">
+                        <Button onClick={() => handleDelete(customer._id)} variant="ghost" size="icon">
                           <Trash2 className="w-4 h-4 text-red-600" />
                         </Button>
                       </div>

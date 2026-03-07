@@ -1,33 +1,24 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { Plus, Trash2, Save, Printer, Eye, Search, Scan, UserPlus } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
 import { toast } from "sonner";
-
-const mockProducts = [
-  { id: 1, name: "Cotton Shirt", barcode: "8901234567890", price: 599, sizes: [{size: "M", stock: 20}, {size: "L", stock: 25}] },
-  { id: 2, name: "Silk Saree", barcode: "8901234567891", price: 2499, sizes: [{size: "Free Size", stock: 12}] },
-];
-
-const mockCustomers = [
-  { id: 1, name: "Rajesh Kumar", phone: "9876543210" },
-  { id: 2, name: "Priya Sharma", phone: "9876543211" },
-  { id: 3, name: "Walking Customer", phone: "0000000000" },
-];
-
-const mockBills = [
-  { id: "INV-001", customer: "Rajesh Kumar", phone: "9876543210", items: 3, subtotal: 4593, gst: 827, total: 5420, date: "2024-01-15" },
-  { id: "INV-002", customer: "Priya Sharma", phone: "9876543211", items: 2, subtotal: 2712, gst: 488, total: 3200, date: "2024-01-15" },
-];
+import { useAppDispatch, useAppSelector } from "@/redux/hooks";
+import { fetchAllProducts } from "@/redux/slices/productSlice";
+import { fetchAllCustomers } from "@/redux/slices/customerSlice";
+import { fetchAllBillings, createBilling } from "@/redux/slices/billingSlice";
 
 export function Billing() {
-  const [bills, setBills] = useState(mockBills);
-  const [items, setItems] = useState([{ id: 1, barcode: "", product: "", size: "", quantity: 1, price: 0, total: 0 }]);
+  const dispatch = useAppDispatch();
+  const { products } = useAppSelector((state) => state.product);
+  const { customers } = useAppSelector((state) => state.customer);
+  const { billings } = useAppSelector((state) => state.billing);
+  
+  const [items, setItems] = useState([{ id: 1, barcode: "", product: "", productId: "", size: "", quantity: 1, price: 0, total: 0 }]);
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [barcodeInput, setBarcodeInput] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
@@ -36,8 +27,14 @@ export function Billing() {
   const [showNewCustomer, setShowNewCustomer] = useState(false);
   const [newCustomer, setNewCustomer] = useState({ name: "", phone: "" });
 
+  useEffect(() => {
+    dispatch(fetchAllProducts());
+    dispatch(fetchAllCustomers());
+    dispatch(fetchAllBillings());
+  }, [dispatch]);
+
   const addItem = () => {
-    setItems([...items, { id: Date.now(), barcode: "", product: "", size: "", quantity: 1, price: 0, total: 0 }]);
+    setItems([...items, { id: Date.now(), barcode: "", product: "", productId: "", size: "", quantity: 1, price: 0, total: 0 }]);
   };
 
   const removeItem = (id: number) => {
@@ -45,20 +42,21 @@ export function Billing() {
   };
 
   const scanBarcode = () => {
-    const product = mockProducts.find(p => p.barcode === barcodeInput);
+    const product = products.find((p: any) => p.barcode === barcodeInput);
     if (product) {
       const newItem = {
         id: Date.now(),
         barcode: product.barcode,
         product: product.name,
-        size: product.sizes[0].size,
+        productId: product._id,
+        size: product.sizes?.[0]?.size?.name || "",
         quantity: 1,
-        price: product.price,
-        total: product.price
+        price: product.salePrice,
+        total: product.salePrice
       };
       setItems([...items, newItem]);
       setBarcodeInput("");
-      toast.success("Product added!");
+      toast.success(`${product.name} added! Available sizes: ${product.sizes?.map((s: any) => s.size?.name).join(', ')}`);
     } else {
       toast.error("Product not found!");
     }
@@ -77,26 +75,32 @@ export function Billing() {
     }));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!selectedCustomer) {
       toast.error("Please select a customer!");
       return;
     }
-    const newBill = {
-      id: `INV-${String(bills.length + 1).padStart(3, '0')}`,
-      customer: selectedCustomer.name,
-      phone: selectedCustomer.phone,
-      items: items.length,
-      subtotal: subtotal,
-      gst: gst,
-      total: total,
-      date: new Date().toISOString().split('T')[0]
-    };
-    setBills([newBill, ...bills]);
-    setSelectedCustomer(null);
-    setItems([{ id: 1, barcode: "", product: "", size: "", quantity: 1, price: 0, total: 0 }]);
-    setDiscount(0);
-    toast.success("Bill saved!");
+    
+    try {
+      const billingData = {
+        customer: selectedCustomer._id,
+        items: items.filter(i => i.product).map(i => ({
+          product: i.productId,
+          size: i.size,
+          quantity: i.quantity,
+          price: i.price
+        })),
+        scanBarcode: barcodeInput
+      };
+      
+      await dispatch(createBilling(billingData)).unwrap();
+      toast.success("Bill saved!");
+      setSelectedCustomer(null);
+      setItems([{ id: 1, barcode: "", product: "", productId: "", size: "", quantity: 1, price: 0, total: 0 }]);
+      setDiscount(0);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to save bill");
+    }
   };
 
   const handlePrint = () => {
@@ -104,19 +108,8 @@ export function Billing() {
     toast.success("Printing invoice...");
   };
 
-  const addNewCustomer = () => {
-    if (newCustomer.name && newCustomer.phone) {
-      setSelectedCustomer(newCustomer);
-      setShowNewCustomer(false);
-      setNewCustomer({ name: "", phone: "" });
-      toast.success("Customer added!");
-    }
-  };
-
-  const filteredBills = bills.filter(
-    (bill) =>
-      bill.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      bill.customer.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredBills = billings.filter((bill: any) =>
+    bill.customer?.name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const subtotal = items.reduce((sum, item) => sum + item.total, 0);
@@ -159,27 +152,17 @@ export function Billing() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b">
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Invoice</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Customer</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Phone</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Items</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Subtotal</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">GST</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Total</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Date</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredBills.map((bill) => (
-                    <tr key={bill.id} className="border-b hover:bg-gray-50">
-                      <td className="py-3 px-4 font-medium">{bill.id}</td>
-                      <td className="py-3 px-4">{bill.customer}</td>
-                      <td className="py-3 px-4">{bill.phone}</td>
-                      <td className="py-3 px-4">{bill.items}</td>
-                      <td className="py-3 px-4 font-medium">₹{bill.subtotal.toFixed(2)}</td>
-                      <td className="py-3 px-4 font-medium">₹{bill.gst.toFixed(2)}</td>
-                      <td className="py-3 px-4 font-medium">₹{bill.total.toFixed(2)}</td>
-                      <td className="py-3 px-4">{bill.date}</td>
+                  {filteredBills.map((bill: any) => (
+                    <tr key={bill._id} className="border-b hover:bg-gray-50">
+                      <td className="py-3 px-4">{bill.customer?.name}</td>
+                      <td className="py-3 px-4">{bill.items?.length}</td>
+                      <td className="py-3 px-4">{new Date(bill.createdAt).toLocaleDateString()}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -198,19 +181,16 @@ export function Billing() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label>Select Customer</Label>
-                <div className="flex gap-2">
-                  <Select value={selectedCustomer?.id} onValueChange={(val) => setSelectedCustomer(mockCustomers.find(c => c.id === +val))}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select customer" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {mockCustomers.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.name} - {c.phone}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                  <Button type="button" variant="outline" size="icon" onClick={() => setShowNewCustomer(true)}>
-                    <UserPlus className="w-4 h-4" />
-                  </Button>
-                </div>
+                <select
+                  className="w-full border rounded-md p-2"
+                  value={selectedCustomer?._id || ""}
+                  onChange={(e) => setSelectedCustomer(customers.find((c: any) => c._id === e.target.value))}
+                >
+                  <option value="">Select customer</option>
+                  {customers.map((c: any) => (
+                    <option key={c._id} value={c._id}>{c.name} - {c.phone}</option>
+                  ))}
+                </select>
                 {selectedCustomer && (
                   <div className="text-sm text-gray-600">
                     {selectedCustomer.name} - {selectedCustomer.phone}
@@ -243,7 +223,7 @@ export function Billing() {
                 <div key={item.id} className="grid grid-cols-12 gap-4 items-end">
                   <div className="col-span-4 space-y-2">
                     <Label>Product</Label>
-                    <Input value={item.product} onChange={(e) => updateItem(item.id, 'product', e.target.value)} placeholder="Product name" />
+                    <Input value={item.product} disabled className="bg-gray-50" />
                   </div>
                   <div className="col-span-2 space-y-2">
                     <Label>Size</Label>
@@ -320,27 +300,6 @@ export function Billing() {
           </div>
         </div>
       </div>
-
-      <Dialog open={showNewCustomer} onOpenChange={setShowNewCustomer}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add New Customer</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 pt-4">
-            <div className="space-y-2">
-              <Label>Name</Label>
-              <Input value={newCustomer.name} onChange={(e) => setNewCustomer({...newCustomer, name: e.target.value})} />
-            </div>
-            <div className="space-y-2">
-              <Label>Phone</Label>
-              <Input value={newCustomer.phone} onChange={(e) => setNewCustomer({...newCustomer, phone: e.target.value})} />
-            </div>
-            <Button onClick={addNewCustomer} className="w-full bg-indigo-600 hover:bg-indigo-700">
-              Add Customer
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

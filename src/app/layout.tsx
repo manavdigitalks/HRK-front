@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import "@/styles/index.css";
 import { Toaster } from "@/app/components/ui/sonner";
+import { ReduxProvider } from "@/redux/provider";
+import { AuthProvider } from "@/components/AuthProvider";
 
 export const metadata: Metadata = {
   title: "Design Beautiful UI",
@@ -15,8 +17,12 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body suppressHydrationWarning>
-        {children}
-        <Toaster />
+        <ReduxProvider>
+          <AuthProvider>
+            {children}
+          </AuthProvider>
+          <Toaster />
+        </ReduxProvider>
       </body>
     </html>
   );
