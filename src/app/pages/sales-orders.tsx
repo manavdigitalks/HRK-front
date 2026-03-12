@@ -68,6 +68,7 @@ export function SalesOrders() {
   };
 
   const columns = [
+    { header: "Date", accessorKey: "createdAt", cell: (item: any) => new Date(item.createdAt).toLocaleDateString('en-GB') },
     { header: "Customer", accessorKey: "customer", cell: (item: any) => (typeof item.customer === 'object' ? item.customer?.name : item.customer) },
     { header: "Amount", accessorKey: "totalAmount", cell: (item: any) => <span className="font-medium">₹{item.totalAmount}</span> },
     { header: "Status", accessorKey: "status", cell: (item: any) => (

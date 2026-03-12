@@ -27,8 +27,8 @@ import { Button } from "./ui/button";
 const navigation = [
   { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
   { name: "Products", path: "/products", icon: Package },
-  { name: "Customers", path: "/customers", icon: UserCircle },
   { name: "Stock Entry", path: "/stock-entry", icon: PackagePlus },
+  { name: "Customers", path: "/customers", icon: UserCircle },
   { name: "Billing", path: "/billing", icon: ShoppingCart },
   { name: "Returns", path: "/returns", icon: RefreshCw },
   { name: "Sales Orders", path: "/sales-orders", icon: FileText },
@@ -128,7 +128,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       {/* Sidebar for desktop */}
       <aside className="hidden lg:flex lg:flex-col lg:w-64 bg-gradient-to-b from-indigo-900 to-indigo-800 text-white shadow-xl">
         <div className="flex items-center justify-center h-16 px-4 bg-indigo-950/50 backdrop-blur-sm">
-          <h1 className="text-xl font-bold tracking-tight">RetailPro POS</h1>
+          <h1 className="text-xl font-bold tracking-tight">HRK </h1>
         </div>
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto scrollbar-hide">
           {navigation.map((item) => (

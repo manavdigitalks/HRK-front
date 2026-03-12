@@ -73,7 +73,7 @@ export function StockEntry() {
 
   const columns = [
     { header: "Date", accessorKey: "entryDate", cell: (item: any) => (
-      <span className="text-sm font-medium">{new Date(item.entryDate).toLocaleDateString()}</span>
+      <span className="text-sm font-medium">{new Date(item.entryDate).toLocaleDateString('en-GB')}</span>
     )},
     { header: "Supplier", accessorKey: "supplierName", cell: (item: any) => (
       <div className="flex flex-col">

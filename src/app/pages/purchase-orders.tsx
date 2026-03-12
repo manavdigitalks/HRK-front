@@ -68,6 +68,7 @@ export function PurchaseOrders() {
   };
 
   const columns = [
+    { header: "Date", accessorKey: "createdAt", cell: (item: any) => new Date(item.createdAt).toLocaleDateString('en-GB') },
     { header: "Supplier", accessorKey: "supplier" },
     { header: "Amount", accessorKey: "totalAmount", cell: (item: any) => <span className="font-medium">₹{item.totalAmount}</span> },
     { header: "Status", accessorKey: "status", cell: (item: any) => (

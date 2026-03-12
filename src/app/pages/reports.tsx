@@ -23,8 +23,8 @@ const reportData = {
     { name: "Amit Patel", purchases: 48000, visits: 10 },
   ],
   recentReturns: [
-    { id: "RET-001", product: "Cotton Shirt", amount: 2540, date: "2024-01-15" },
-    { id: "RET-002", product: "Silk Saree", amount: 1200, date: "2024-01-14" },
+    { id: "RET-001", product: "Cotton Shirt", amount: 2540, date: "15/01/2024" },
+    { id: "RET-002", product: "Silk Saree", amount: 1200, date: "14/01/2024" },
   ],
   purchaseOrders: [
     { id: "PO-001", supplier: "ABC Textiles", amount: 45000, status: "Pending" },

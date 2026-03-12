@@ -75,6 +75,7 @@ export function Returns() {
   };
 
   const columns = [
+    { header: "Date", accessorKey: "createdAt", cell: (item: any) => new Date(item.createdAt).toLocaleDateString('en-GB') },
     { header: "Invoice", accessorKey: "invoice" },
     { header: "Product", accessorKey: "product", cell: (item: any) => (typeof item.product === 'object' ? item.product?.name : item.product) },
     { header: "Customer", accessorKey: "customer", cell: (item: any) => (typeof item.customer === 'object' ? item.customer?.name : item.customer) },

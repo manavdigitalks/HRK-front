@@ -57,6 +57,11 @@ export const deleteBilling = createAsyncThunk('billing/delete', async (id: strin
   return id;
 });
 
+export const scanBarcode = createAsyncThunk('billing/scan', async (barcode: string) => {
+  const response = await api.get(`/billing/scan/${barcode}`);
+  return response.data.data;
+});
+
 const billingSlice = createSlice({
   name: 'billing',
   initialState,
