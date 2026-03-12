@@ -11,6 +11,7 @@ import returnReducer from './slices/returnSlice';
 import sizeMasterReducer from './slices/sizeMasterSlice';
 import categoryMasterReducer from './slices/categoryMasterSlice';
 import transportMasterReducer from './slices/transportMasterSlice';
+import stockEntryReducer from './slices/stockEntrySlice';
 
 
 export const store = configureStore({
@@ -27,6 +28,7 @@ export const store = configureStore({
     sizeMaster: sizeMasterReducer,
     categoryMaster: categoryMasterReducer,
     transportMaster: transportMasterReducer,
+    stockEntry: stockEntryReducer,
   },
 });
 
