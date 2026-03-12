@@ -57,6 +57,11 @@ export const deleteTransportMaster = createAsyncThunk('transportMaster/delete', 
   return id;
 });
 
+export const fetchTransportDropdown = createAsyncThunk('transportMaster/fetchDropdown', async () => {
+  const response = await api.get('/transportmaster/dropdown');
+  return response.data.data;
+});
+
 const transportMasterSlice = createSlice({
   name: 'transportMaster',
   initialState,

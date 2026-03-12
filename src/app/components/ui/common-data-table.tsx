@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -42,6 +43,16 @@ export function CommonDataTable({
   onDelete,
   loading,
 }: CommonDataTableProps) {
+  const [searchTerm, setSearchTerm] = useState("");
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      onSearchChange(searchTerm);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm, onSearchChange]);
+
   return (
     <div className="space-y-4 p-1">
       <div className="flex items-center justify-between gap-4">
@@ -50,7 +61,8 @@ export function CommonDataTable({
           <Input
             placeholder="Quick search records..."
             className="pl-10 h-10 border-gray-200 focus-visible:ring-indigo-500 rounded-lg shadow-sm"
-            onChange={(e) => onSearchChange(e.target.value)}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
       </div>
