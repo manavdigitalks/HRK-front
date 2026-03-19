@@ -2,7 +2,17 @@ import * as React from "react";
 
 import { cn } from "./utils";
 
-function Input({ className, type, ...props }: React.ComponentProps<"input">) {
+function Input({ className, type, onChange, ...props }: React.ComponentProps<"input">) {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (type === "number" && e.target.value) {
+      // Remove leading zeros but keep single 0 or 0.xxx
+      e.target.value = e.target.value.replace(/^(-?)0+(?=\d)/, "$1");
+    }
+    if (onChange) {
+      onChange(e);
+    }
+  };
+
   return (
     <input
       type={type}
@@ -14,6 +24,7 @@ function Input({ className, type, ...props }: React.ComponentProps<"input">) {
         className,
       )}
       {...props}
+      onChange={handleChange}
     />
   );
 }
