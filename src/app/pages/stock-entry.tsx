@@ -8,7 +8,7 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../components/ui/dialog";
-import { Plus, Inbox, Calendar, User, FileText, Package, Hash, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { CommonDataTable } from "../components/ui/common-data-table";
 import { Badge } from "../components/ui/badge";
@@ -85,7 +85,12 @@ export function StockEntry() {
       </div>
     )},
     { header: "Product", accessorKey: "product", cell: (item: any) => (
-      <span className="font-bold text-indigo-600">{item.product?.productCode}</span>
+      <div className="flex flex-col">
+        <span className="font-bold text-indigo-600">{item.product?.productCode}</span>
+        <span className="text-[10px] text-gray-500 font-medium whitespace-nowrap">
+            ({item.product?.sizes?.map((s:any) => s.name).join(", ")})
+        </span>
+      </div>
     )},
     { header: "Sets", accessorKey: "totalSets", cell: (item: any) => (
       <Badge variant="secondary">{item.totalSets} Sets</Badge>
@@ -160,7 +165,11 @@ export function StockEntry() {
               <Label>Product</Label>
               <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={formData.product} onChange={(e) => handleProductChange(e.target.value)}>
                 <option value="">Select product</option>
-                {products.map((p: any) => (<option key={p._id} value={p._id}>{p.productCode} - {p.designNo}</option>))}
+                {products.map((p: any) => (
+                    <option key={p._id} value={p._id}>
+                        {p.productCode} ({p.sizes?.map((s:any) => s.name).join(", ")})
+                    </option>
+                ))}
               </select>
             </div>
 
