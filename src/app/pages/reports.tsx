@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
-import { FileText, Download, TrendingUp, Users, DollarSign, AlertTriangle, RotateCcw, ShoppingCart } from "lucide-react";
+import { FileText, Download, TrendingUp, Users, DollarSign, AlertTriangle, RotateCcw } from "lucide-react";
 import { Badge } from "../components/ui/badge";
 import { toast } from "sonner";
 
@@ -26,10 +26,6 @@ const reportData = {
     { id: "RET-001", product: "Cotton Shirt", amount: 2540, date: "15/01/2024" },
     { id: "RET-002", product: "Silk Saree", amount: 1200, date: "14/01/2024" },
   ],
-  purchaseOrders: [
-    { id: "PO-001", supplier: "ABC Textiles", amount: 45000, status: "Pending" },
-    { id: "PO-002", supplier: "XYZ Fabrics", amount: 68500, status: "Completed" },
-  ]
 };
 
 export function Reports() {
@@ -225,52 +221,6 @@ export function Reports() {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <ShoppingCart className="w-5 h-5 text-blue-600" />
-              Purchase Orders
-            </CardTitle>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => handleExportPDF('purchase-orders')}>
-                <FileText className="w-4 h-4 mr-2" /> PDF
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => handleExportExcel('purchase-orders')}>
-                <Download className="w-4 h-4 mr-2" /> Excel
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Order ID</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Supplier</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Amount</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {reportData.purchaseOrders.map((order, i) => (
-                  <tr key={i} className="border-b hover:bg-gray-50">
-                    <td className="py-3 px-4 font-medium">{order.id}</td>
-                    <td className="py-3 px-4">{order.supplier}</td>
-                    <td className="py-3 px-4 font-medium">₹{order.amount.toLocaleString()}</td>
-                    <td className="py-3 px-4">
-                      <Badge variant={order.status === "Completed" ? "default" : "secondary"}>
-                        {order.status}
-                      </Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

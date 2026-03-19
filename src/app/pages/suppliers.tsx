@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { fetchAllSuppliers, createSupplier, updateSupplier, deleteSupplier } from "@/redux/slices/supplierSlice";
 import { CommonDataTable } from "../components/ui/common-data-table";
+import { PhoneInput } from "../components/ui/phone-input";
 
 export function Suppliers() {
   const dispatch = useAppDispatch();
@@ -23,6 +24,14 @@ export function Suppliers() {
     state: "",
   });
   const [search, setSearch] = useState("");
+
+  const sanitizePhone = (phone: string) => {
+    if (!phone) return "";
+    let p = phone.replace(/\D/g, "");
+    if (p.length === 12 && p.startsWith("91")) return p.slice(2);
+    if (p.length > 10) return p.slice(-10);
+    return p;
+  };
 
   useEffect(() => {
     dispatch(fetchAllSuppliers({ page: 1, limit: 10, search }));
@@ -42,7 +51,7 @@ export function Suppliers() {
     setEditingSupplier(supplier);
     setFormData({ 
       name: supplier.name, 
-      number: supplier.number, 
+      number: sanitizePhone(supplier.number || ""), 
       gstNumber: supplier.gstNumber || "",
       station: supplier.station || "",
       state: supplier.state || ""
@@ -135,7 +144,7 @@ export function Suppliers() {
             </div>
             <div className="space-y-2">
               <Label>Contact Number</Label>
-              <Input placeholder="Phone number" value={formData.number} onChange={(e) => setFormData({...formData, number: e.target.value})} />
+              <PhoneInput value={formData.number} onPhoneChange={(val) => setFormData({...formData, number: val})} />
             </div>
             <div className="space-y-2">
               <Label>GST Number</Label>

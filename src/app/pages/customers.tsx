@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
@@ -10,11 +10,18 @@ import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { fetchAllCustomers, createCustomer, updateCustomer, deleteCustomer } from "@/redux/slices/customerSlice";
 import { fetchTransportDropdown } from "@/redux/slices/transportMasterSlice";
 import { CommonDataTable } from "../components/ui/common-data-table";
+import { Combobox } from "../components/ui/combobox";
+import { PhoneInput } from "../components/ui/phone-input";
+import api from "@/lib/axios";
 
 export function Customers() {
   const dispatch = useAppDispatch();
   const { customers, loading, pagination } = useAppSelector((state) => state.customer);
   const [transports, setTransports] = useState<any[]>([]);
+  
+  const [allStates, setAllStates] = useState<string[]>([]);
+  const [allCities, setAllCities] = useState<string[]>([]);
+
   const [isOpen, setIsOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<any>(null);
   const [formData, setFormData] = useState({ 
@@ -27,13 +34,58 @@ export function Customers() {
   });
   const [search, setSearch] = useState("");
 
+  const sanitizePhone = (phone: string) => {
+    if (!phone) return "";
+    // Remove all non-digits
+    let p = phone.replace(/\D/g, "");
+    // If it starts with 91 and has 12 digits, take last 10
+    if (p.length === 12 && p.startsWith("91")) return p.slice(2);
+    // If it has more than 10 digits, take last 10
+    if (p.length > 10) return p.slice(-10);
+    return p;
+  };
+
+  const states = useMemo(() => allStates.map(s => ({ label: s, value: s })), [allStates]);
+  
+  const cities = useMemo(() => {
+    const options = allCities.map(c => ({ label: c, value: c }));
+    if (formData.station && !allCities.includes(formData.station)) {
+      options.push({ label: formData.station, value: formData.station });
+    }
+    return options.sort((a, b) => a.label.localeCompare(b.label));
+  }, [allCities, formData.station]);
+
   useEffect(() => {
     dispatch(fetchAllCustomers({ page: 1, limit: 10, search }));
     dispatch(fetchTransportDropdown()).unwrap().then(setTransports);
+    
+    // Fetch initial states
+    api.get("/location/states").then(res => {
+      if (res.data.status) setAllStates(res.data.data);
+    });
   }, [dispatch, search]);
+
+  useEffect(() => {
+    if (formData.state) {
+        api.get(`/location/cities?state=${formData.state}`).then(res => {
+            if (res.data.status) setAllCities(res.data.data);
+        });
+    } else {
+        setAllCities([]);
+    }
+  }, [formData.state]);
 
   const handlePageChange = (page: number) => {
     dispatch(fetchAllCustomers({ page, limit: 10, search }));
+  };
+
+  const findStateKey = (stateName: string) => {
+    if (!stateName) return "";
+    return allStates.find(s => s.toLowerCase() === stateName.toLowerCase()) || stateName;
+  };
+
+  const handleStateChange = (state: string) => {
+    setFormData({ ...formData, state, station: "" });
   };
 
   const handleAdd = () => {
@@ -44,12 +96,13 @@ export function Customers() {
 
   const handleEdit = (customer: any) => {
     setEditingCustomer(customer);
+    const stateKey = findStateKey(customer.state || "");
     setFormData({ 
       name: customer.name, 
-      number: customer.number || customer.phone, 
+      number: sanitizePhone(customer.number || customer.phone || ""), 
       gstNumber: customer.gstNumber || "",
       station: customer.station || "",
-      state: customer.state || "",
+      state: stateKey,
       transport: customer.transport?._id || customer.transport || ""
     });
     setIsOpen(true);
@@ -64,6 +117,12 @@ export function Customers() {
         await dispatch(createCustomer(formData)).unwrap();
         toast.success("Customer added!");
       }
+      
+      // Permanently save the location to master DB if it's new
+      if (formData.state && formData.station) {
+        api.post("/location/add", { state: formData.state, city: formData.station });
+      }
+
       setIsOpen(false);
       dispatch(fetchAllCustomers({ page: pagination?.currentPage || 1, limit: 10, search }));
     } catch (err: any) {
@@ -143,19 +202,32 @@ export function Customers() {
             </div>
             <div className="space-y-2">
               <Label>Contact Number</Label>
-              <Input placeholder="Phone number" value={formData.number} onChange={(e) => setFormData({...formData, number: e.target.value})} />
+              <PhoneInput value={formData.number} onPhoneChange={(val) => setFormData({...formData, number: val})} />
             </div>
             <div className="space-y-2">
               <Label>GST Number</Label>
               <Input placeholder="GSTIN" value={formData.gstNumber} onChange={(e) => setFormData({...formData, gstNumber: e.target.value})} className="uppercase" />
             </div>
             <div className="space-y-2">
-              <Label>City</Label>
-              <Input placeholder="e.g. Mumbai" value={formData.station} onChange={(e) => setFormData({...formData, station: e.target.value})} />
+              <Label>State</Label>
+              <Combobox 
+                options={states}
+                value={formData.state}
+                onChange={handleStateChange}
+                placeholder="Search state..."
+                emptyMessage="State not found."
+              />
             </div>
             <div className="space-y-2">
-              <Label>State</Label>
-              <Input placeholder="e.g. Maharashtra" value={formData.state} onChange={(e) => setFormData({...formData, state: e.target.value})} />
+              <Label>City / Station</Label>
+              <Combobox 
+                options={cities}
+                value={formData.station}
+                onChange={(val) => setFormData({...formData, station: val})}
+                placeholder={formData.state ? "Search city..." : "Select state first"}
+                emptyMessage="City not found."
+                disabled={!formData.state}
+              />
             </div>
             <div className="col-span-2 space-y-2">
               <Label>Transport</Label>

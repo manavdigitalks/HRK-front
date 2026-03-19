@@ -5,8 +5,6 @@ import productReducer from './slices/productSlice';
 import customerReducer from './slices/customerSlice';
 import stockReducer from './slices/stockSlice';
 import billingReducer from './slices/billingSlice';
-import saleOrderReducer from './slices/saleOrderSlice';
-import purchaseOrderReducer from './slices/purchaseOrderSlice';
 import returnReducer from './slices/returnSlice';
 import sizeMasterReducer from './slices/sizeMasterSlice';
 import categoryMasterReducer from './slices/categoryMasterSlice';
@@ -24,8 +22,6 @@ export const store = configureStore({
     supplier: supplierReducer,
     stock: stockReducer,
     billing: billingReducer,
-    saleOrder: saleOrderReducer,
-    purchaseOrder: purchaseOrderReducer,
     return: returnReducer,
     sizeMaster: sizeMasterReducer,
     categoryMaster: categoryMasterReducer,

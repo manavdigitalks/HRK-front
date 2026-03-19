@@ -10,8 +10,6 @@ import {
   PackagePlus,
   ShoppingCart,
   RefreshCw,
-  FileText,
-  ShoppingBag,
   BarChart3,
   LogOut,
   Menu,
@@ -33,8 +31,6 @@ const navigation = [
   { name: "Customers", path: "/customers", icon: UserCircle },
   { name: "Packing Slip", path: "/billing", icon: ShoppingCart },
   { name: "Returns", path: "/returns", icon: RefreshCw },
-  { name: "Sales Orders", path: "/sales-orders", icon: FileText },
-  { name: "Purchase Orders", path: "/purchase-orders", icon: ShoppingBag },
   { name: "Reports", path: "/reports", icon: BarChart3 },
   {
     name: "Settings",
