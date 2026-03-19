@@ -8,95 +8,132 @@ import { Plus } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
 import { toast } from "sonner";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
-import { fetchAllReturns, createReturn, updateReturn, deleteReturn } from "@/redux/slices/returnSlice";
+import { fetchAllReturns, createReturn, deleteReturn } from "@/redux/slices/returnSlice";
 import { CommonDataTable } from "../components/ui/common-data-table";
+import api from "@/lib/axios";
 
 export function Returns() {
   const dispatch = useAppDispatch();
   const { returns, loading, pagination } = useAppSelector((state) => state.return);
+
+  const [allProducts, setAllProducts] = useState<any[]>([]);
   const [isOpen, setIsOpen] = useState(false);
-  const [editingReturn, setEditingReturn] = useState<any>(null);
-  const [formData, setFormData] = useState({ invoice: "", product: "", customer: "", amount: 0, reason: "", status: "Pending" });
   const [search, setSearch] = useState("");
+
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  // sizeQtys: { [sizeId]: qty }
+  const [sizeQtys, setSizeQtys] = useState<Record<string, number>>({});
+  const [returnDate, setReturnDate] = useState(new Date().toISOString().split("T")[0]);
 
   useEffect(() => {
     dispatch(fetchAllReturns({ page: 1, limit: 10, search }));
   }, [dispatch, search]);
 
+  useEffect(() => {
+    api.get("/product", { params: { limit: 200 } }).then((r) => setAllProducts(r.data.data || []));
+  }, []);
+
   const handlePageChange = (page: number) => {
     dispatch(fetchAllReturns({ page, limit: 10, search }));
   };
 
-  const handleAdd = () => {
-    setEditingReturn(null);
-    setFormData({ invoice: "", product: "", customer: "", amount: 0, reason: "", status: "Pending" });
+  const handleOpenDialog = () => {
+    setSelectedProduct(null);
+    setSizeQtys({});
+    setReturnDate(new Date().toISOString().split("T")[0]);
     setIsOpen(true);
   };
 
-  const handleEdit = (ret: any) => {
-    setEditingReturn(ret);
-    setFormData({ 
-      invoice: ret.invoice, 
-      product: typeof ret.product === 'object' ? ret.product?._id : ret.product, 
-      customer: typeof ret.customer === 'object' ? ret.customer?._id : ret.customer, 
-      amount: ret.amount, 
-      reason: ret.reason || "", 
-      status: ret.status 
-    });
-    setIsOpen(true);
+  const handleProductChange = (productId: string) => {
+    const p = allProducts.find((x) => x._id === productId) || null;
+    setSelectedProduct(p);
+    setSizeQtys({});
   };
 
-  const handleSave = async () => {
-    try {
-      if (editingReturn) {
-        await dispatch(updateReturn({ id: editingReturn._id, data: formData })).unwrap();
-        toast.success("Return updated!");
-      } else {
-        await dispatch(createReturn(formData)).unwrap();
-        toast.success("Return created!");
+  const toggleSize = (sizeId: string) => {
+    setSizeQtys((prev) => {
+      if (sizeId in prev) {
+        const next = { ...prev };
+        delete next[sizeId];
+        return next;
       }
+      return { ...prev, [sizeId]: 1 };
+    });
+  };
+
+  const handleSubmit = async () => {
+    const selectedSizes = Object.entries(sizeQtys).filter(([, q]) => q > 0);
+    if (!selectedProduct || selectedSizes.length === 0 || !returnDate) {
+      toast.error("Product, kam se kam ek size aur date bharo");
+      return;
+    }
+    try {
+      await dispatch(
+        createReturn({
+          product: selectedProduct._id,
+          sizes: selectedSizes.map(([size, qty]) => ({ size, qty })),
+          returnDate,
+        })
+      ).unwrap();
+      toast.success("Return darz ho gaya!");
       setIsOpen(false);
       dispatch(fetchAllReturns({ page: pagination?.currentPage || 1, limit: 10, search }));
     } catch (err: any) {
-      toast.error(err.message || "Failed to save return");
+      toast.error(err.message || "Return save nahi hua");
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm("Are you sure you want to delete this return?")) {
-      try {
-        await dispatch(deleteReturn(id)).unwrap();
-        toast.success("Return deleted!");
-        dispatch(fetchAllReturns({ page: pagination?.currentPage || 1, limit: 10, search }));
-      } catch (err: any) {
-        toast.error(err.message || "Failed to delete return");
-      }
+    if (!window.confirm("Ye return delete karna chahte ho?")) return;
+    try {
+      await dispatch(deleteReturn(id)).unwrap();
+      toast.success("Return delete ho gaya");
+      dispatch(fetchAllReturns({ page: pagination?.currentPage || 1, limit: 10, search }));
+    } catch (err: any) {
+      toast.error(err.message || "Delete nahi hua");
     }
   };
 
   const columns = [
-    { header: "Date", accessorKey: "createdAt", cell: (item: any) => new Date(item.createdAt).toLocaleDateString('en-GB') },
-    { header: "Invoice", accessorKey: "invoice" },
-    { header: "Product", accessorKey: "product", cell: (item: any) => (typeof item.product === 'object' ? item.product?.name : item.product) },
-    { header: "Customer", accessorKey: "customer", cell: (item: any) => (typeof item.customer === 'object' ? item.customer?.name : item.customer) },
-    { header: "Amount", accessorKey: "amount", cell: (item: any) => <span className="font-medium">₹{item.amount}</span> },
-    { header: "Status", accessorKey: "status", cell: (item: any) => (
-      <Badge variant={item.status === "Completed" ? "default" : "secondary"}>
-        {item.status}
-      </Badge>
-    )},
+    {
+      header: "Return Date",
+      accessorKey: "returnDate",
+      cell: (item: any) => new Date(item.returnDate).toLocaleDateString("en-GB"),
+    },
+    {
+      header: "Product",
+      accessorKey: "product",
+      cell: (item: any) =>
+        item.product ? `${item.product.designNo} / ${item.product.sku}` : "-",
+    },
+    {
+      header: "Category",
+      accessorKey: "category",
+      cell: (item: any) => item.product?.category?.name || "-",
+    },
+    {
+      header: "Size",
+      accessorKey: "size",
+      cell: (item: any) => (
+        <Badge variant="secondary" className="bg-indigo-50 text-indigo-700">
+          {item.size?.name || "-"}
+        </Badge>
+      ),
+    },
+    { header: "Qty", accessorKey: "qty", cell: (item: any) => <span className="font-bold">{item.qty}</span> },
   ];
+
+  const hasSelectedSizes = Object.keys(sizeQtys).length > 0;
 
   return (
     <div className="p-4 lg:p-6 space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Returns</h1>
-          <p className="text-gray-600 mt-1">Manage product returns</p>
+          <p className="text-gray-600 mt-1">Product returns manage karo</p>
         </div>
-        <Button onClick={handleAdd} className="bg-indigo-600 hover:bg-indigo-700">
-          <Plus className="w-4 h-4 mr-2" />
-          New Return
+        <Button onClick={handleOpenDialog} className="bg-indigo-600 hover:bg-indigo-700">
+          <Plus className="w-4 h-4 mr-2" /> New Return
         </Button>
       </div>
 
@@ -106,44 +143,99 @@ export function Returns() {
         pagination={pagination || { totalRecords: 0, currentPage: 1, totalPages: 0, limit: 10 }}
         onPageChange={handlePageChange}
         onSearchChange={setSearch}
-        onEdit={handleEdit}
         onDelete={handleDelete}
         loading={loading}
       />
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[520px]">
           <DialogHeader>
-            <DialogTitle>{editingReturn ? "Edit Return" : "New Return"}</DialogTitle>
+            <DialogTitle>New Return</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 pt-4">
-            <div className="space-y-2">
-              <Label>Invoice</Label>
-              <Input value={formData.invoice} onChange={(e) => setFormData({...formData, invoice: e.target.value})} />
+
+          <div className="space-y-4 pt-2">
+            {/* Product Dropdown */}
+            <div className="space-y-1">
+              <Label>Product (Design No / SKU)</Label>
+              <select
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={selectedProduct?._id || ""}
+                onChange={(e) => handleProductChange(e.target.value)}
+              >
+                <option value="">-- Product Select Karo --</option>
+                {allProducts.map((p: any) => (
+                  <option key={p._id} value={p._id}>
+                    {p.designNo} / {p.sku} {p.category?.name ? `(${p.category.name})` : ""} {p.sizes?.length ? `[${p.sizes.map((s: any) => s.name).join(", ")}]` : ""}
+                  </option>
+                ))}
+              </select>
             </div>
-            <div className="space-y-2">
-              <Label>Product ID</Label>
-              <Input value={formData.product} onChange={(e) => setFormData({...formData, product: e.target.value})} />
-            </div>
-            <div className="space-y-2">
-              <Label>Customer ID</Label>
-              <Input value={formData.customer} onChange={(e) => setFormData({...formData, customer: e.target.value})} />
-            </div>
-            <div className="space-y-2">
-              <Label>Amount</Label>
-              <Input type="number" value={formData.amount} onChange={(e) => setFormData({...formData, amount: +e.target.value})} />
-            </div>
-            <div className="space-y-2">
-              <Label>Reason</Label>
-              <Input value={formData.reason} onChange={(e) => setFormData({...formData, reason: e.target.value})} />
-            </div>
-            <div className="space-y-2">
-              <Label>Status</Label>
-              <Input value={formData.status} onChange={(e) => setFormData({...formData, status: e.target.value})} />
-            </div>
-            <Button onClick={handleSave} className="w-full bg-indigo-600 hover:bg-indigo-700">
-              {editingReturn ? "Update" : "Create"} Return
-            </Button>
+
+            {/* Size Buttons + Qty per size */}
+            {selectedProduct && (
+              <div className="space-y-3">
+                <Label>Sizes Select Karo (multiple)</Label>
+                <div className="flex flex-wrap gap-2">
+                  {selectedProduct.sizes?.map((s: any) => {
+                    const isSelected = s._id in sizeQtys;
+                    return (
+                      <button
+                        key={s._id}
+                        type="button"
+                        onClick={() => toggleSize(s._id)}
+                        className={`px-4 py-1.5 text-sm font-bold rounded-md border transition-colors ${
+                          isSelected
+                            ? "bg-indigo-600 text-white border-indigo-600"
+                            : "bg-white text-gray-700 border-gray-200 hover:border-indigo-300"
+                        }`}
+                      >
+                        {s.name}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Qty inputs for selected sizes */}
+                {hasSelectedSizes && (
+                  <div className="space-y-2">
+                    {selectedProduct.sizes
+                      .filter((s: any) => s._id in sizeQtys)
+                      .map((s: any) => (
+                        <div key={s._id} className="flex items-center gap-3">
+                          <span className="w-16 text-sm font-bold text-indigo-600">{s.name}</span>
+                          <Input
+                            type="number"
+                            min={1}
+                            value={sizeQtys[s._id]}
+                            onChange={(e) =>
+                              setSizeQtys((prev) => ({ ...prev, [s._id]: Math.max(1, +e.target.value) }))
+                            }
+                            className="h-8 w-24 text-sm"
+                          />
+                          <span className="text-xs text-gray-400">qty</span>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Date + Submit */}
+            {hasSelectedSizes && (
+              <>
+                <div className="space-y-1">
+                  <Label>Return Date</Label>
+                  <Input
+                    type="date"
+                    value={returnDate}
+                    onChange={(e) => setReturnDate(e.target.value)}
+                  />
+                </div>
+                <Button onClick={handleSubmit} className="w-full bg-indigo-600 hover:bg-indigo-700">
+                  Return Submit Karo
+                </Button>
+              </>
+            )}
           </div>
         </DialogContent>
       </Dialog>

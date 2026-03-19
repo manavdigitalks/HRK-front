@@ -266,18 +266,15 @@ export function Products() {
     )},
     { header: "Sizes", accessorKey: "sizes", cell: (item: any) => (
       <div className="flex flex-wrap gap-1">
-        {item.sizes?.map((s: any, i: number) => {
-          const inStock = item.inStockCount || 0;
-          return (
+        {item.sizes?.map((s: any, i: number) => (
             <Badge 
                 key={i} 
-                variant={inStock === 0 ? "destructive" : "secondary"} 
-                className={`text-[9px] px-1 font-bold ${inStock === 0 ? "bg-red-50 text-red-600 border-red-100 hover:bg-red-100" : "bg-indigo-50 text-indigo-700 border-indigo-100"}`}
+                variant={s.count === 0 ? "destructive" : "secondary"} 
+                className={`text-[9px] px-1 font-bold ${s.count === 0 ? "bg-red-50 text-red-600 border-red-100 hover:bg-red-100" : "bg-indigo-50 text-indigo-700 border-indigo-100"}`}
             >
-              {s.name} : {inStock}
+              {s.name} : {s.count ?? 0}
             </Badge>
-          );
-        })}
+        ))}
       </div>
     )},
     { header: "Actions", accessorKey: "actions", cell: (item: any) => (
