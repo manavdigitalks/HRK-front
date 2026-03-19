@@ -76,7 +76,6 @@ export function SizeMaster() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Size Master</h1>
-          <p className="text-gray-500 mt-1">Manage product sizes</p>
         </div>
         <Button onClick={handleAdd} className="bg-indigo-600 hover:bg-indigo-700">
           <Plus className="w-4 h-4 mr-2" />

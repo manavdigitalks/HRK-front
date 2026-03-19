@@ -84,8 +84,8 @@ export function Billing() {
     <div className="p-4 lg:p-6 space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 uppercase tracking-tighter">Packing Slip</h1>
-          <p className="text-gray-400 font-bold text-xs uppercase tracking-widest">Inventory Logistics & History</p>
+          <h1 className="text-3xl font-bold text-gray-900">Packing Slip</h1>
+          
         </div>
         <Button onClick={() => router.push("/billing/new")} className="bg-indigo-600 hover:bg-indigo-700 font-black px-8">
           <Receipt className="w-4 h-4 mr-2" />
