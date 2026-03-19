@@ -1,16 +1,17 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
-import { fetchAllCustomers } from "@/redux/slices/customerSlice";
+import { fetchAllCustomers, createCustomer } from "@/redux/slices/customerSlice";
 import { scanBarcode, createBilling, updateBilling, fetchBillingById } from "@/redux/slices/billingSlice";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Badge } from "./ui/badge";
 import { toast } from "sonner";
-import { Save, Scan, Receipt, ChevronDown, ChevronUp, Trash2, ArrowLeft } from "lucide-react";
+import { Save, Scan, Receipt, ChevronDown, ChevronUp, Trash2, ArrowLeft, UserPlus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Switch } from "./ui/switch";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "./ui/dialog";
 
 export function BillingForm({ id }: { id?: string }) {
   const router = useRouter();
@@ -24,6 +25,9 @@ export function BillingForm({ id }: { id?: string }) {
   const [gstEnabled, setGstEnabled] = useState(false);
   const [gstPercent, setGstPercent] = useState(18);
   const [loading, setLoading] = useState(false);
+  const [addCustomerOpen, setAddCustomerOpen] = useState(false);
+  const [newCustomer, setNewCustomer] = useState({ name: "", number: "" });
+  const [savingCustomer, setSavingCustomer] = useState(false);
 
   useEffect(() => {
     dispatch(fetchAllCustomers({ page: 1, limit: 1000 }));
@@ -69,6 +73,25 @@ export function BillingForm({ id }: { id?: string }) {
         });
     }
   }, [dispatch, id, router]);
+
+  const handleAddCustomer = async () => {
+    if (!newCustomer.name || !newCustomer.number) {
+      toast.error("Name and number required");
+      return;
+    }
+    setSavingCustomer(true);
+    try {
+      const created = await dispatch(createCustomer(newCustomer)).unwrap();
+      setSelectedCustomer(created._id);
+      setNewCustomer({ name: "", number: "" });
+      setAddCustomerOpen(false);
+      toast.success("Customer added!");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to add customer");
+    } finally {
+      setSavingCustomer(false);
+    }
+  };
 
   const handleScan = async () => {
     if (!barcodeInput) return;
@@ -246,16 +269,28 @@ export function BillingForm({ id }: { id?: string }) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white p-6 rounded-lg border shadow-sm">
               <div className="space-y-2">
                 <Label className="text-sm font-bold text-gray-700">Select Customer</Label>
-                <select
-                  className="w-full h-11 px-3 border rounded-md text-sm font-medium focus:border-indigo-500 outline-none transition-all bg-white"
-                  value={selectedCustomer}
-                  onChange={(e) => setSelectedCustomer(e.target.value)}
-                >
-                  <option value="">-- Choose a Customer --</option>
-                  {customers.map((c: any) => (
-                    <option key={c._id} value={c._id}>{c.name} ({c.number || c.phone})</option>
-                  ))}
-                </select>
+                <div className="flex gap-2">
+                  <select
+                    className="flex-1 h-11 px-3 border rounded-md text-sm font-medium focus:border-indigo-500 outline-none transition-all bg-white"
+                    value={selectedCustomer}
+                    onChange={(e) => setSelectedCustomer(e.target.value)}
+                  >
+                    <option value="">-- Choose a Customer --</option>
+                    {customers.map((c: any) => (
+                      <option key={c._id} value={c._id}>{c.name} ({c.number || c.phone})</option>
+                    ))}
+                  </select>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-11 w-11 shrink-0 border-indigo-200 text-indigo-600 hover:bg-indigo-50"
+                    onClick={() => setAddCustomerOpen(true)}
+                    title="Add new customer"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
               <div className="space-y-2">
                 <Label className="text-sm font-bold text-gray-700">Scan Barcode / Seq ID</Label>
@@ -447,6 +482,38 @@ export function BillingForm({ id }: { id?: string }) {
             </div>
         </div>
       </div>
+
+      <Dialog open={addCustomerOpen} onOpenChange={setAddCustomerOpen}>
+        <DialogContent className="sm:max-w-[380px]">
+          <DialogHeader>
+            <DialogTitle>Add New Customer</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Name</Label>
+              <Input
+                placeholder="Customer name"
+                value={newCustomer.name}
+                onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Phone Number</Label>
+              <Input
+                placeholder="10-digit number"
+                value={newCustomer.number}
+                onChange={(e) => setNewCustomer({ ...newCustomer, number: e.target.value })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddCustomerOpen(false)}>Cancel</Button>
+            <Button onClick={handleAddCustomer} disabled={savingCustomer} className="bg-indigo-600 text-white">
+              {savingCustomer ? "Saving..." : "Add Customer"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
