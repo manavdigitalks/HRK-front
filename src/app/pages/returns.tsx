@@ -64,7 +64,7 @@ export function Returns() {
   const handleSubmit = async () => {
     const selectedSizes = Object.entries(sizeQtys).filter(([, q]) => q > 0);
     if (!selectedProduct || selectedSizes.length === 0 || !returnDate) {
-      toast.error("Product, kam se kam ek size aur date bharo");
+      toast.error("Please select a product, at least one size, and a return date");
       return;
     }
     try {
@@ -75,22 +75,22 @@ export function Returns() {
           returnDate,
         })
       ).unwrap();
-      toast.success("Return darz ho gaya!");
+      toast.success("Return saved successfully!");
       setIsOpen(false);
       dispatch(fetchAllReturns({ page: pagination?.currentPage || 1, limit: 10, search }));
     } catch (err: any) {
-      toast.error(err.message || "Return save nahi hua");
+      toast.error(err.message || "Failed to save return");
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm("Ye return delete karna chahte ho?")) return;
+    if (!window.confirm("Are you sure you want to delete this return?")) return;
     try {
       await dispatch(deleteReturn(id)).unwrap();
-      toast.success("Return delete ho gaya");
+      toast.success("Return deleted successfully");
       dispatch(fetchAllReturns({ page: pagination?.currentPage || 1, limit: 10, search }));
     } catch (err: any) {
-      toast.error(err.message || "Delete nahi hua");
+      toast.error(err.message || "Failed to delete return");
     }
   };
 
@@ -130,7 +130,7 @@ export function Returns() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Returns</h1>
-          <p className="text-gray-600 mt-1">Product returns manage karo</p>
+          <p className="text-gray-600 mt-1">Manage product returns</p>
         </div>
         <Button onClick={handleOpenDialog} className="bg-indigo-600 hover:bg-indigo-700">
           <Plus className="w-4 h-4 mr-2" /> New Return
@@ -162,7 +162,7 @@ export function Returns() {
                 value={selectedProduct?._id || ""}
                 onChange={(e) => handleProductChange(e.target.value)}
               >
-                <option value="">-- Product Select Karo --</option>
+                <option value="">-- Select a Product --</option>
                 {allProducts.map((p: any) => (
                   <option key={p._id} value={p._id}>
                     {p.designNo} / {p.sku} {p.category?.name ? `(${p.category.name})` : ""} {p.sizes?.length ? `[${p.sizes.map((s: any) => s.name).join(", ")}]` : ""}
@@ -174,7 +174,7 @@ export function Returns() {
             {/* Size Buttons + Qty per size */}
             {selectedProduct && (
               <div className="space-y-3">
-                <Label>Sizes Select Karo (multiple)</Label>
+                <Label>Select Sizes (multiple)</Label>
                 <div className="flex flex-wrap gap-2">
                   {selectedProduct.sizes?.map((s: any) => {
                     const isSelected = s._id in sizeQtys;
@@ -212,7 +212,7 @@ export function Returns() {
                             }
                             className="h-8 w-24 text-sm"
                           />
-                          <span className="text-xs text-gray-400">qty</span>
+                          <span className="text-xs text-gray-400">Qty</span>
                         </div>
                       ))}
                   </div>
@@ -232,7 +232,7 @@ export function Returns() {
                   />
                 </div>
                 <Button onClick={handleSubmit} className="w-full bg-indigo-600 hover:bg-indigo-700">
-                  Return Submit Karo
+                  Submit Return
                 </Button>
               </>
             )}
