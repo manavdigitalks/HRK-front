@@ -12,6 +12,8 @@ import { fetchAllReturns, createReturn, deleteReturn } from "@/redux/slices/retu
 import { CommonDataTable } from "../components/ui/common-data-table";
 import api from "@/lib/axios";
 
+import { Combobox } from "../components/ui/combobox";
+
 export function Returns() {
   const dispatch = useAppDispatch();
   const { returns, loading, pagination } = useAppSelector((state) => state.return);
@@ -21,6 +23,13 @@ export function Returns() {
   const [search, setSearch] = useState("");
 
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
+
+  // Format options for Combobox
+  const productOptions = allProducts.map((p: any) => ({
+    label: `${p.designNo} / ${p.sku} ${p.category?.name ? `(${p.category.name})` : ""} ${p.sizes?.length ? `[${p.sizes.map((s: any) => s.name).join(", ")}]` : ""}`,
+    value: p._id
+  }));
+
   // sizeQtys: { [sizeId]: qty }
   const [sizeQtys, setSizeQtys] = useState<Record<string, number>>({});
   const [returnDate, setReturnDate] = useState(new Date().toISOString().split("T")[0]);
@@ -156,18 +165,12 @@ export function Returns() {
             {/* Product Dropdown */}
             <div className="space-y-1">
               <Label>Product (Design No / SKU)</Label>
-              <select
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              <Combobox
+                options={productOptions}
                 value={selectedProduct?._id || ""}
-                onChange={(e) => handleProductChange(e.target.value)}
-              >
-                <option value="">-- Select a Product --</option>
-                {allProducts.map((p: any) => (
-                  <option key={p._id} value={p._id}>
-                    {p.designNo} / {p.sku} {p.category?.name ? `(${p.category.name})` : ""} {p.sizes?.length ? `[${p.sizes.map((s: any) => s.name).join(", ")}]` : ""}
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => handleProductChange(val)}
+                placeholder="Search Product..."
+              />
             </div>
 
             {/* Size Buttons + Qty per size */}

@@ -13,11 +13,19 @@ import { useRouter } from "next/navigation";
 import { Switch } from "./ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "./ui/dialog";
 
+import { Combobox } from "./ui/combobox";
+
 export function BillingForm({ id }: { id?: string }) {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const { customers } = useAppSelector((state) => state.customer);
   
+  // Format customers for Combobox
+  const customerOptions = customers.map((c: any) => ({
+    label: `${c.name} (${c.number || c.phone})`,
+    value: c._id
+  }));
+
   const [items, setItems] = useState<any[]>([]); // Grouped entries
   const [selectedCustomer, setSelectedCustomer] = useState("");
   const [barcodeInput, setBarcodeInput] = useState("");
@@ -270,16 +278,13 @@ export function BillingForm({ id }: { id?: string }) {
               <div className="space-y-2">
                 <Label className="text-sm font-bold text-gray-700">Select Customer</Label>
                 <div className="flex gap-2">
-                  <select
-                    className="flex-1 h-11 px-3 border rounded-md text-sm font-medium focus:border-indigo-500 outline-none transition-all bg-white"
+                  <Combobox
+                    options={customerOptions}
                     value={selectedCustomer}
-                    onChange={(e) => setSelectedCustomer(e.target.value)}
-                  >
-                    <option value="">-- Choose a Customer --</option>
-                    {customers.map((c: any) => (
-                      <option key={c._id} value={c._id}>{c.name} ({c.number || c.phone})</option>
-                    ))}
-                  </select>
+                    onChange={setSelectedCustomer}
+                    placeholder="Search Customer..."
+                    className="flex-1"
+                  />
                   <Button
                     type="button"
                     variant="outline"

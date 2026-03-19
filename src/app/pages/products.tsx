@@ -18,6 +18,8 @@ import { Barcode } from "../components/ui/barcode";
 import bwipjs from "bwip-js";
 import jsPDF from "jspdf";
 
+import { Combobox } from "../components/ui/combobox";
+
 export function Products() {
   const dispatch = useAppDispatch();
   const { products, loading, pagination } = useAppSelector((state) => state.product);
@@ -25,6 +27,9 @@ export function Products() {
   
   const [categories, setCategories] = useState<any[]>([]);
   const [sizes, setSizes] = useState<any[]>([]);
+
+  // Format options for Combobox
+  const categoryOptions = categories.map((cat: any) => ({ label: cat.name, value: cat._id }));
   
   const [isOpen, setIsOpen] = useState(false);
   const [isInventoryOpen, setIsInventoryOpen] = useState(false);
@@ -332,10 +337,12 @@ export function Products() {
             
             <div className="space-y-2">
                 <Label>Category</Label>
-                <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value})}>
-                    <option value="">Select Category</option>
-                    {categories.map((cat: any) => (<option key={cat._id} value={cat._id}>{cat.name}</option>))}
-                </select>
+                <Combobox
+                  options={categoryOptions}
+                  value={formData.category}
+                  onChange={(val) => setFormData({...formData, category: val})}
+                  placeholder="Select Category"
+                />
             </div>
 
             <div className="grid grid-cols-2 gap-4">

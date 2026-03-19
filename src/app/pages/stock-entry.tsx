@@ -24,11 +24,20 @@ const emptyForm = () => ({
   totalSets: 0,
 });
 
+import { Combobox } from "../components/ui/combobox";
+
 export function StockEntry() {
   const dispatch = useAppDispatch();
   const { entries, loading, pagination } = useAppSelector((state) => state.stockEntry);
   const { products } = useAppSelector((state) => state.product);
   const { dropdownOptions: suppliers } = useAppSelector((state) => state.supplier);
+
+  // Format options for Combobox
+  const supplierOptions = suppliers.map((s: any) => ({ label: s.name, value: s._id }));
+  const productOptions = products.map((p: any) => ({
+    label: `${p.productCode} (${p.sizes?.map((s: any) => s.name).join(", ")})`,
+    value: p._id
+  }));
 
   const [isOpen, setIsOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
@@ -237,26 +246,22 @@ export function StockEntry() {
 
             <div className="space-y-2">
               <Label>Supplier</Label>
-              <select
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              <Combobox
+                options={supplierOptions}
                 value={formData.supplier}
-                onChange={(e) => setFormData({...formData, supplier: e.target.value})}
-              >
-                <option value="">Select supplier</option>
-                {suppliers.map((s: any) => (<option key={s._id} value={s._id}>{s.name}</option>))}
-              </select>
+                onChange={(val) => setFormData({...formData, supplier: val})}
+                placeholder="Select Supplier"
+              />
             </div>
 
             <div className="space-y-2">
               <Label>Product</Label>
-              <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={formData.product} onChange={(e) => handleProductChange(e.target.value)}>
-                <option value="">Select product</option>
-                {products.map((p: any) => (
-                  <option key={p._id} value={p._id}>
-                    {p.productCode} ({p.sizes?.map((s: any) => s.name).join(", ")})
-                  </option>
-                ))}
-              </select>
+              <Combobox
+                options={productOptions}
+                value={formData.product}
+                onChange={handleProductChange}
+                placeholder="Search Product..."
+              />
             </div>
 
             {selectedProductDetails && (
