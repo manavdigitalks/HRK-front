@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { fetchAllProducts } from "@/redux/slices/productSlice";
 import { createStockEntry, fetchAllStockEntries, deleteStockEntry } from "@/redux/slices/stockEntrySlice";
+import { fetchSupplierDropdown } from "@/redux/slices/supplierSlice";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
@@ -16,11 +17,12 @@ export function StockEntry() {
   const dispatch = useAppDispatch();
   const { entries, loading, pagination } = useAppSelector((state) => state.stockEntry);
   const { products } = useAppSelector((state) => state.product);
+  const { dropdownOptions: suppliers } = useAppSelector((state) => state.supplier);
   
   const [isOpen, setIsOpen] = useState(false);
   const [formData, setFormData] = useState({
     entryDate: new Date().toISOString().split('T')[0],
-    supplierName: "",
+    supplier: "",
     invoiceNumber: "",
     product: "",
     totalSets: 0,
@@ -31,6 +33,7 @@ export function StockEntry() {
   useEffect(() => {
     dispatch(fetchAllStockEntries({ page: 1, limit: 10 }));
     dispatch(fetchAllProducts({ page: 1, limit: 100 }));
+    dispatch(fetchSupplierDropdown());
   }, [dispatch]);
 
   const handlePageChange = (page: number) => {
@@ -44,7 +47,7 @@ export function StockEntry() {
   };
 
   const handleSave = async () => {
-    if (!formData.product || !formData.totalSets || !formData.supplierName || !formData.invoiceNumber) {
+    if (!formData.product || !formData.totalSets || !formData.supplier || !formData.invoiceNumber) {
       toast.error("Please fill all required fields");
       return;
     }
@@ -75,9 +78,9 @@ export function StockEntry() {
     { header: "Date", accessorKey: "entryDate", cell: (item: any) => (
       <span className="text-sm font-medium">{new Date(item.entryDate).toLocaleDateString('en-GB')}</span>
     )},
-    { header: "Supplier", accessorKey: "supplierName", cell: (item: any) => (
+    { header: "Supplier", accessorKey: "supplier", cell: (item: any) => (
       <div className="flex flex-col">
-        <span className="font-bold text-sm">{item.supplierName}</span>
+        <span className="font-bold text-sm">{item.supplier?.name}</span>
         <span className="text-[10px] text-gray-400">Inv: {item.invoiceNumber}</span>
       </div>
     )},
@@ -104,11 +107,11 @@ export function StockEntry() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-            <h1 className="text-2xl font-bold">Stock Entry</h1>
-            <p className="text-sm text-gray-500">Record new stock and generate batch barcodes</p>
+            <h1 className="text-2xl font-bold">Stock In</h1>
+            <p className="text-sm text-gray-500">Add new stock to inventory</p>
         </div>
         <Button onClick={() => setIsOpen(true)} className="bg-indigo-600">
-          <Plus className="w-4 h-4 mr-2" /> New Entry
+          <Plus className="w-4 h-4 mr-2" /> Stock In
         </Button>
       </div>
 
@@ -126,13 +129,13 @@ export function StockEntry() {
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="sm:max-w-[550px]">
           <DialogHeader>
-            <DialogTitle>New Stock Entry</DialogTitle>
+            <DialogTitle>Stock In</DialogTitle>
           </DialogHeader>
           
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Entry Date</Label>
+                <Label>Date</Label>
                 <Input type="date" value={formData.entryDate} onChange={(e) => setFormData({...formData, entryDate: e.target.value})} />
               </div>
               <div className="space-y-2">
@@ -142,14 +145,21 @@ export function StockEntry() {
             </div>
 
             <div className="space-y-2">
-              <Label>Supplier Name</Label>
-              <Input value={formData.supplierName} onChange={(e) => setFormData({...formData, supplierName: e.target.value})} placeholder="Enter supplier" />
+              <Label>Supplier</Label>
+              <select 
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" 
+                value={formData.supplier} 
+                onChange={(e) => setFormData({...formData, supplier: e.target.value})}
+              >
+                <option value="">Select supplier</option>
+                {suppliers.map((s: any) => (<option key={s._id} value={s._id}>{s.name}</option>))}
+              </select>
             </div>
 
             <div className="space-y-2">
-              <Label>Select Product</Label>
+              <Label>Product</Label>
               <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={formData.product} onChange={(e) => handleProductChange(e.target.value)}>
-                <option value="">Select a product</option>
+                <option value="">Select product</option>
                 {products.map((p: any) => (<option key={p._id} value={p._id}>{p.productCode} - {p.designNo}</option>))}
               </select>
             </div>
@@ -158,7 +168,7 @@ export function StockEntry() {
               <div className="p-3 bg-indigo-50 rounded-md border border-indigo-100 flex items-center justify-between">
                 <div>
                    <p className="font-bold text-xs text-indigo-700">{selectedProductDetails.productCode}</p>
-                   <p className="text-[10px] text-gray-500">Includes sizes: {selectedProductDetails.sizes?.map((s:any) => s.name).join(", ")}</p>
+                   <p className="text-[10px] text-gray-400">Sizes: {selectedProductDetails.sizes?.map((s:any) => s.name).join(", ")}</p>
                 </div>
                 <Badge className="bg-white text-indigo-600 border-indigo-200">{selectedProductDetails.sizes?.length || 0} Sizes</Badge>
               </div>
@@ -178,7 +188,7 @@ export function StockEntry() {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsOpen(false)}>Cancel</Button>
-            <Button onClick={handleSave} className="bg-indigo-600 text-white">Generate Barcodes</Button>
+            <Button onClick={handleSave} className="bg-indigo-600 text-white">Save</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

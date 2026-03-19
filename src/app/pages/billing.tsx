@@ -87,14 +87,14 @@ export function Billing() {
       };
 
       await dispatch(createBilling(billingData)).unwrap();
-      toast.success("Bill saved!");
+      toast.success("Packing slip saved!");
       setIsOpen(false);
       setItems([]);
       setSelectedCustomer("");
       setDiscount(0);
       dispatch(fetchAllBillings({ page: 1, limit: 10, search }));
     } catch (err: any) {
-      toast.error(err.message || "Failed to save bill");
+      toast.error(err.message || "Failed to save slip");
     }
   };
 
@@ -102,7 +102,7 @@ export function Billing() {
     if (window.confirm("Are you sure? This will revert items to stock.")) {
       try {
         await dispatch(deleteBilling(id)).unwrap();
-        toast.success("Bill removed");
+        toast.success("Slip removed");
         dispatch(fetchAllBillings({ page: pagination?.currentPage || 1, limit: 10, search }));
       } catch (err: any) {
         toast.error(err.message || "Failed to delete");
@@ -111,7 +111,7 @@ export function Billing() {
   };
 
   const columns = [
-    { header: "Bill No", accessorKey: "billNumber", cell: (item: any) => <span className="font-bold text-indigo-600">#{item.billNumber}</span> },
+    { header: "Slip No", accessorKey: "billNumber", cell: (item: any) => <span className="font-bold text-indigo-600">#{item.billNumber}</span> },
     {
       header: "Customer", accessorKey: "customer", cell: (item: any) => (
         <div className="flex flex-col">
@@ -128,12 +128,12 @@ export function Billing() {
     <div className="p-4 lg:p-6 space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Billing</h1>
-          <p className="text-gray-600 mt-1">Manage invoice history</p>
+          <h1 className="text-3xl font-bold text-gray-900">Packing Slip</h1>
+          <p className="text-gray-600 mt-1">Manage packing slip history</p>
         </div>
         <Button onClick={() => { setIsOpen(true); setItems([]); setDiscount(0); }} className="bg-indigo-600 hover:bg-indigo-700">
           <Receipt className="w-4 h-4 mr-2" />
-          Generate New Bill
+          New Packing Slip
         </Button>
       </div>
 
@@ -152,7 +152,7 @@ export function Billing() {
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Add New Bill</DialogTitle>
+            <DialogTitle>New Packing Slip</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-6 pt-4">
@@ -258,7 +258,7 @@ export function Billing() {
 
               <div className="flex gap-2 w-full md:w-auto">
                 <Button onClick={handleSave} className="flex-1 md:flex-none bg-indigo-600 font-bold px-8 h-10">
-                  <Save className="w-4 h-4 mr-2" /> Save Bill
+                  <Save className="w-4 h-4 mr-2" /> Save Slip
                 </Button>
                 <Button variant="outline" onClick={() => setIsOpen(false)} className="flex-1 md:flex-none h-10 font-bold text-gray-500">
                   Cancel

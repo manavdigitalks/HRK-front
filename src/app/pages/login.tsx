@@ -32,7 +32,10 @@ export function Login() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-100 to-purple-100 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-3xl font-bold text-gray-900">Retail Pro</CardTitle>
+          <div className="flex justify-center mb-4">
+            <img src="/hrk_logo.png" alt="HRK Logo" className="h-16 w-auto" />
+          </div>
+          <CardTitle className="text-3xl font-bold text-gray-900">HRK Retail</CardTitle>
           <p className="text-gray-600 mt-2">Sign in to your account</p>
         </CardHeader>
         <CardContent>

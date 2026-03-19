@@ -5,8 +5,11 @@ import { ReduxProvider } from "@/redux/provider";
 import { AuthProvider } from "@/components/AuthProvider";
 
 export const metadata: Metadata = {
-  title: "Design Beautiful UI",
-  description: "Design Beautiful UI",
+  title: "HRK Retail",
+  description: "HRK Retail Management System",
+  icons: {
+    icon: "/ic_launcher.png",
+  },
 };
 
 export default function RootLayout({

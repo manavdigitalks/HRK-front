@@ -29,7 +29,7 @@ const navigation = [
   { name: "Products", path: "/products", icon: Package },
   { name: "Stock Entry", path: "/stock-entry", icon: PackagePlus },
   { name: "Customers", path: "/customers", icon: UserCircle },
-  { name: "Billing", path: "/billing", icon: ShoppingCart },
+  { name: "Packing Slip", path: "/billing", icon: ShoppingCart },
   { name: "Returns", path: "/returns", icon: RefreshCw },
   { name: "Sales Orders", path: "/sales-orders", icon: FileText },
   { name: "Purchase Orders", path: "/purchase-orders", icon: ShoppingBag },
@@ -38,6 +38,7 @@ const navigation = [
     name: "Settings",
     icon: Settings,
     children: [
+      { name: "Supplier Master", path: "/suppliers", icon: Users },
       { name: "Size Master", path: "/size-master", icon: Ruler },
       { name: "Category Master", path: "/category-master", icon: Package },
       { name: "Transport Master", path: "/transport-master", icon: Truck },
@@ -127,8 +128,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
     <div className="flex h-screen bg-gray-50">
       {/* Sidebar for desktop */}
       <aside className="hidden lg:flex lg:flex-col lg:w-64 bg-gradient-to-b from-indigo-900 to-indigo-800 text-white shadow-xl">
-        <div className="flex items-center justify-center h-16 px-4 bg-indigo-950/50 backdrop-blur-sm">
-          <h1 className="text-xl font-bold tracking-tight">HRK </h1>
+        <div className="flex items-center justify-center h-16 bg-white shadow-sm px-6">
+          <img src="/hrk_logo.png" alt="HRK Logo" className="h-10 w-auto" />
         </div>
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto scrollbar-hide">
           {navigation.map((item) => (
@@ -155,13 +156,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
             onClick={() => setSidebarOpen(false)}
           />
           <aside className="fixed inset-y-0 left-0 w-64 bg-gradient-to-b from-indigo-900 to-indigo-800 text-white shadow-2xl">
-            <div className="flex items-center justify-between h-16 px-4 bg-indigo-950">
-              <h1 className="text-xl font-bold">RetailPro POS</h1>
+            <div className="flex items-center justify-between h-16 px-4 bg-white border-b">
+              <div className="flex items-center ml-2">
+                <img src="/hrk_logo.png" alt="HRK Logo" className="h-8 w-auto" />
+              </div>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => setSidebarOpen(false)}
-                className="text-white hover:bg-white/10"
+                className="text-gray-500 hover:bg-gray-100"
               >
                 <X className="w-5 h-5" />
               </Button>

@@ -7,84 +7,79 @@ import { Plus, User } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
 import { toast } from "sonner";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
-import { fetchAllCustomers, createCustomer, updateCustomer, deleteCustomer } from "@/redux/slices/customerSlice";
-import { fetchTransportDropdown } from "@/redux/slices/transportMasterSlice";
+import { fetchAllSuppliers, createSupplier, updateSupplier, deleteSupplier } from "@/redux/slices/supplierSlice";
 import { CommonDataTable } from "../components/ui/common-data-table";
 
-export function Customers() {
+export function Suppliers() {
   const dispatch = useAppDispatch();
-  const { customers, loading, pagination } = useAppSelector((state) => state.customer);
-  const [transports, setTransports] = useState<any[]>([]);
+  const { suppliers, loading, pagination } = useAppSelector((state) => state.supplier);
   const [isOpen, setIsOpen] = useState(false);
-  const [editingCustomer, setEditingCustomer] = useState<any>(null);
+  const [editingSupplier, setEditingSupplier] = useState<any>(null);
   const [formData, setFormData] = useState({ 
     name: "", 
     number: "", 
     gstNumber: "",
     station: "",
     state: "",
-    transport: ""
   });
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    dispatch(fetchAllCustomers({ page: 1, limit: 10, search }));
-    dispatch(fetchTransportDropdown()).unwrap().then(setTransports);
+    dispatch(fetchAllSuppliers({ page: 1, limit: 10, search }));
   }, [dispatch, search]);
 
   const handlePageChange = (page: number) => {
-    dispatch(fetchAllCustomers({ page, limit: 10, search }));
+    dispatch(fetchAllSuppliers({ page, limit: 10, search }));
   };
 
   const handleAdd = () => {
-    setEditingCustomer(null);
-    setFormData({ name: "", number: "", gstNumber: "", station: "", state: "", transport: "" });
+    setEditingSupplier(null);
+    setFormData({ name: "", number: "", gstNumber: "", station: "", state: "" });
     setIsOpen(true);
   };
 
-  const handleEdit = (customer: any) => {
-    setEditingCustomer(customer);
+  const handleEdit = (supplier: any) => {
+    setEditingSupplier(supplier);
     setFormData({ 
-      name: customer.name, 
-      number: customer.number || customer.phone, 
-      gstNumber: customer.gstNumber || "",
-      station: customer.station || "",
-      state: customer.state || "",
-      transport: customer.transport?._id || customer.transport || ""
+      name: supplier.name, 
+      number: supplier.number, 
+      gstNumber: supplier.gstNumber || "",
+      station: supplier.station || "",
+      state: supplier.state || ""
     });
     setIsOpen(true);
   };
 
   const handleSave = async () => {
     try {
-      if (editingCustomer) {
-        await dispatch(updateCustomer({ id: editingCustomer._id, data: formData })).unwrap();
-        toast.success("Customer updated!");
+      if (editingSupplier) {
+        await dispatch(updateSupplier({ id: editingSupplier._id, data: formData })).unwrap();
+        toast.success("Supplier updated!");
       } else {
-        await dispatch(createCustomer(formData)).unwrap();
-        toast.success("Customer added!");
+        await dispatch(createSupplier(formData)).unwrap();
+        toast.success("Supplier added!");
       }
       setIsOpen(false);
-      dispatch(fetchAllCustomers({ page: pagination?.currentPage || 1, limit: 10, search }));
+      dispatch(fetchAllSuppliers({ page: pagination?.currentPage || 1, limit: 10, search }));
     } catch (err: any) {
-      toast.error(err.message || "Failed to save customer");
+      toast.error(err.message || "Failed to save supplier");
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm("Are you sure you want to delete this customer?")) {
+    if (window.confirm("Are you sure you want to delete this supplier?")) {
       try {
-        await dispatch(deleteCustomer(id)).unwrap();
-        toast.success("Customer deleted!");
-        dispatch(fetchAllCustomers({ page: pagination?.currentPage || 1, limit: 10, search }));
+        await dispatch(deleteSupplier(id)).unwrap();
+        toast.success("Supplier deleted!");
+        dispatch(fetchAllSuppliers({ page: pagination?.currentPage || 1, limit: 10, search }));
       } catch (err: any) {
-        toast.error(err.message || "Failed to delete customer");
+        toast.error(err.message || "Failed to delete supplier");
       }
     }
   };
 
   const columns = [
-    { header: "Customer", accessorKey: "name", cell: (item: any) => (
+    { header: "Supplier", accessorKey: "name", cell: (item: any) => (
       <div className="flex items-center space-x-3">
         <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
           <User className="w-5 h-5 text-indigo-600" />
@@ -102,27 +97,24 @@ export function Customers() {
             <span className="text-[10px] text-indigo-400 font-bold uppercase tracking-widest">{item.state}</span>
         </div>
     )},
-    { header: "Transport", accessorKey: "transport", cell: (item: any) => (
-        <span className="text-sm font-semibold text-gray-600">{item.transport?.name || "N/A"}</span>
-    )},
   ];
 
   return (
     <div className="p-4 lg:p-6 space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Customers</h1>
-          <p className="text-gray-600 mt-1">Manage customer database</p>
+          <h1 className="text-3xl font-bold text-gray-900">Suppliers</h1>
+          <p className="text-gray-600 mt-1">Manage supplier database</p>
         </div>
         <Button onClick={handleAdd} className="bg-indigo-600 hover:bg-indigo-700">
           <Plus className="w-4 h-4 mr-2" />
-          Add Customer
+          Add Supplier
         </Button>
       </div>
 
       <CommonDataTable
         columns={columns}
-        data={customers}
+        data={suppliers}
         pagination={pagination || { totalRecords: 0, currentPage: 1, totalPages: 0, limit: 10 }}
         onPageChange={handlePageChange}
         onSearchChange={setSearch}
@@ -134,11 +126,11 @@ export function Customers() {
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>{editingCustomer ? "Edit Customer" : "Add Customer"}</DialogTitle>
+            <DialogTitle>{editingSupplier ? "Edit Supplier" : "Add Supplier"}</DialogTitle>
           </DialogHeader>
           <div className="grid grid-cols-2 gap-4 pt-4">
             <div className="col-span-2 space-y-2">
-              <Label>Customer Name</Label>
+              <Label>Supplier Name</Label>
               <Input placeholder="Enter name" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
             </div>
             <div className="space-y-2">
@@ -156,19 +148,6 @@ export function Customers() {
             <div className="space-y-2">
               <Label>State</Label>
               <Input placeholder="e.g. Maharashtra" value={formData.state} onChange={(e) => setFormData({...formData, state: e.target.value})} />
-            </div>
-            <div className="col-span-2 space-y-2">
-              <Label>Transport</Label>
-              <select 
-                className="flex h-10 w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-50"
-                value={formData.transport} 
-                onChange={(e) => setFormData({...formData, transport: e.target.value})}
-              >
-                <option value="">Select Transport</option>
-                {transports.map((t: any) => (
-                    <option key={t._id} value={t._id}>{t.name}</option>
-                ))}
-              </select>
             </div>
             <div className="col-span-2 pt-4">
                 <Button onClick={handleSave} className="w-full bg-indigo-600 hover:bg-indigo-700 h-12 font-bold uppercase tracking-widest text-[11px]">
