@@ -27,6 +27,7 @@ interface ComboboxProps {
   emptyMessage?: string
   disabled?: boolean
   className?: string
+  allowCustomValue?: boolean
 }
 
 export function Combobox({
@@ -37,6 +38,7 @@ export function Combobox({
   emptyMessage = "No option found.",
   disabled = false,
   className,
+  allowCustomValue = false,
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false)
   const [searchValue, setSearchValue] = React.useState("")
@@ -69,8 +71,8 @@ export function Combobox({
             onValueChange={setSearchValue}
           />
           <CommandList className="max-h-[300px]">
-             {/* If no exact match and searchValue is not empty, show "Add new" option */}
-             {searchValue && !options.some(o => o.label.toLowerCase() === searchValue.toLowerCase()) && (
+            {/* If no exact match and searchValue is not empty, show "Add new" option if allowed */}
+            {allowCustomValue && searchValue && !options.some(o => o.label.toLowerCase() === searchValue.toLowerCase()) && (
               <CommandGroup>
                 <CommandItem
                   value={searchValue}
@@ -86,7 +88,7 @@ export function Combobox({
                 </CommandItem>
               </CommandGroup>
             )}
-            {options.filter(o => o.label.toLowerCase().includes(searchValue.toLowerCase())).length === 0 && !searchValue && (
+            {options.filter(o => o.label.toLowerCase().includes(searchValue.toLowerCase())).length === 0 && (!allowCustomValue || !searchValue) && (
                 <CommandEmpty>{emptyMessage}</CommandEmpty>
             )}
             <CommandGroup>

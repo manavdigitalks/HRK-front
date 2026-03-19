@@ -217,6 +217,7 @@ export function Customers() {
                 onChange={handleStateChange}
                 placeholder="Search state..."
                 emptyMessage="State not found."
+                allowCustomValue={true}
               />
             </div>
             <div className="space-y-2">
@@ -228,6 +229,7 @@ export function Customers() {
                 placeholder={formData.state ? "Search city..." : "Select state first"}
                 emptyMessage="City not found."
                 disabled={!formData.state}
+                allowCustomValue={true}
               />
             </div>
             <div className="col-span-2 space-y-2">
