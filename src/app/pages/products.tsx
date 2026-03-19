@@ -326,7 +326,7 @@ export function Products() {
               </div>
               <div className="space-y-2">
                 <Label>SKU</Label>
-                <Input value={formData.sku} onChange={(e) => setFormData({...formData, sku: e.target.value})} placeholder="e.g. Cotton" />
+                <Input value={formData.sku} onChange={(e) => setFormData({...formData, sku: e.target.value})} placeholder="e.g. Color" />
               </div>
             </div>
             
