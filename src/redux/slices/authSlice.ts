@@ -18,6 +18,7 @@ const initialState: AuthState = {
 export const login = createAsyncThunk('auth/login', async (credentials: { email: string; password: string }) => {
   const response = await api.post('/staff/login', credentials);
   localStorage.setItem('token', response.data.token);
+  document.cookie = `token=${response.data.token}; path=/; max-age=86400; SameSite=Lax`;
   return response.data;
 });
 
@@ -34,6 +35,7 @@ const authSlice = createSlice({
       state.user = null;
       state.token = null;
       localStorage.removeItem('token');
+      document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
     },
   },
   extraReducers: (builder) => {

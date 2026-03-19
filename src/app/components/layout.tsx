@@ -23,6 +23,8 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { Button } from "./ui/button";
+import { useAppDispatch } from "@/redux/hooks";
+import { logout } from "@/redux/slices/authSlice";
 
 const navigation = [
   { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
@@ -52,6 +54,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
+  const dispatch = useAppDispatch();
 
   // Auto-expand settings if child is active
   useEffect(() => {
@@ -63,6 +66,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   }, [pathname]);
 
   const handleLogout = () => {
+    dispatch(logout());
     router.push("/login");
   };
 

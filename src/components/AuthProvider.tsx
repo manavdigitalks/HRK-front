@@ -14,16 +14,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const storedToken = localStorage.getItem('token');
     
-    if (storedToken && !user) {
+    // Sync localStorage token to cookie if it exists
+    if (storedToken) {
+      document.cookie = `token=${storedToken}; path=/; max-age=86400; SameSite=Lax`;
+    }
+    
+    // Fallback to cookie token if localStorage was cleared
+    const cookieToken = document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1];
+    const activeToken = storedToken || cookieToken;
+
+    // Attempt to fetch current user if token exists but user doesn't
+    if (activeToken && !user) {
+      // If we only have cookie token, sync it back to localStorage
+      if (!storedToken && cookieToken) {
+        localStorage.setItem('token', cookieToken);
+      }
       dispatch(getCurrentUser());
-    }
-
-    if (!storedToken && pathname !== '/login') {
-      router.push('/login');
-    }
-
-    if (storedToken && pathname === '/login') {
-      router.push('/dashboard');
     }
   }, [token, user, pathname, router, dispatch]);
 
