@@ -251,8 +251,8 @@ export function Products() {
   const columns = [
     { header: "Product Code", accessorKey: "productCode", cell: (item: any) => (
       <div className="flex flex-col">
-        <span className="font-bold text-indigo-600 underline decoration-indigo-200 underline-offset-4">{item.productCode}</span>
-        <span className="text-[10px] text-gray-400 capitalize">{item.designNo}</span>
+        <span className="font-bold text-indigo-600 decoration-indigo-200 underline-offset-4">{item.productCode}</span>
+        {/* <span className="text-[10px] text-gray-400 capitalize">{item.designNo}</span> */}
       </div>
     )},
     { header: "Category", accessorKey: "category", cell: (item: any) => (
@@ -261,7 +261,7 @@ export function Products() {
     { header: "Price", accessorKey: "salePrice", cell: (item: any) => (
       <div className="flex flex-col">
         <span className="text-green-600 font-bold">₹{item.salePrice}</span>
-        <span className="text-[10px] text-gray-400 line-through">₹{item.purchasePrice}</span>
+        {/* <span className="text-[10px] text-gray-400 line-through">₹{item.purchasePrice}</span> */}
       </div>
     )},
     { header: "Sizes", accessorKey: "sizes", cell: (item: any) => (
@@ -291,18 +291,17 @@ export function Products() {
 
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="p-4 lg:p-6 space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-            <h1 className="text-2xl font-bold">Products</h1>
-            <p className="text-sm text-gray-500">Manage your products and prices</p>
+          <h1 className="text-3xl font-bold text-gray-900">Products</h1>
         </div>
-        <Button onClick={handleAdd} className="bg-indigo-600">
+        <Button onClick={handleAdd} className="bg-indigo-600 hover:bg-indigo-700">
           <Plus className="w-4 h-4 mr-2" /> New Product
         </Button>
       </div>
 
-      <div className="bg-white rounded-lg border shadow-sm">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden p-6">
         <CommonDataTable
           columns={columns}
           data={products}

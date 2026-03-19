@@ -89,7 +89,7 @@ export function Users() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Users & Staff</h1>
-          <p className="text-gray-600 mt-1">Manage system users</p>
+          <p className="text-gray-500 mt-1">Manage system users</p>
         </div>
         <Button onClick={handleAdd} className="bg-indigo-600 hover:bg-indigo-700">
           <Plus className="w-4 h-4 mr-2" />
@@ -97,16 +97,18 @@ export function Users() {
         </Button>
       </div>
 
-      <CommonDataTable
-        columns={columns}
-        data={staffs}
-        pagination={pagination || { totalRecords: 0, currentPage: 1, totalPages: 0, limit: 10 }}
-        onPageChange={handlePageChange}
-        onSearchChange={setSearch}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-        loading={loading}
-      />
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden p-6">
+        <CommonDataTable
+          columns={columns}
+          data={staffs}
+          pagination={pagination || { totalRecords: 0, currentPage: 1, totalPages: 0, limit: 10 }}
+          onPageChange={handlePageChange}
+          onSearchChange={setSearch}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          loading={loading}
+        />
+      </div>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent>

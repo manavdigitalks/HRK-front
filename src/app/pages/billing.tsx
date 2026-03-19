@@ -6,7 +6,8 @@ import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { fetchAllBillings, deleteBilling } from "@/redux/slices/billingSlice";
 import { CommonDataTable } from "../components/ui/common-data-table";
 import { useRouter } from "next/navigation";
-import { Edit, Trash2, Receipt } from "lucide-react";
+import { Edit, Trash2, Receipt, Download } from "lucide-react";
+import api from "@/lib/axios";
 
 export function Billing() {
   const router = useRouter();
@@ -20,6 +21,20 @@ export function Billing() {
 
   const handlePageChange = (page: number) => {
     dispatch(fetchAllBillings({ page, limit: 10, search }));
+  };
+
+  const handleDownloadSlip = async (id: string, billNumber: string) => {
+    try {
+      const response = await api.get(`/billing/${id}/packing-slip`, { responseType: "blob" });
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: "application/pdf" }));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `packing-slip-${billNumber}.pdf`;
+      link.click();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      toast.error("Failed to download packing slip");
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -51,6 +66,9 @@ export function Billing() {
         accessorKey: "actions", 
         cell: (item: any) => (
             <div className="flex gap-2">
+                <Button variant="outline" size="icon" onClick={() => handleDownloadSlip(item._id, item.billNumber)} className="h-8 w-8 text-green-600" title="Download Packing Slip">
+                    <Download className="w-4 h-4" />
+                </Button>
                 <Button variant="outline" size="icon" onClick={() => router.push(`/billing/edit/${item._id}`)} className="h-8 w-8 text-amber-600">
                     <Edit className="w-4 h-4" />
                 </Button>

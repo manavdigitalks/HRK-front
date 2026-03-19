@@ -196,18 +196,17 @@ export function StockEntry() {
   ];
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="p-4 lg:p-6 space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Stock In</h1>
-          <p className="text-sm text-gray-500">Add new stock to inventory</p>
+          <h1 className="text-3xl font-bold text-gray-900">Stock In</h1>
         </div>
-        <Button onClick={handleOpen} className="bg-indigo-600">
+        <Button onClick={handleOpen} className="bg-indigo-600 hover:bg-indigo-700">
           <Plus className="w-4 h-4 mr-2" /> Stock In
         </Button>
       </div>
 
-      <div className="bg-white rounded-lg border shadow-sm">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden p-6">
         <CommonDataTable
           columns={columns}
           data={entries}

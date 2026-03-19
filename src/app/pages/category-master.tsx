@@ -75,7 +75,7 @@ export function CategoryMaster() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Category Master</h1>
-          <p className="text-gray-600 mt-1">Manage product categories</p>
+          <p className="text-gray-500 mt-1">Manage product categories</p>
         </div>
         <Button onClick={handleAdd} className="bg-indigo-600 hover:bg-indigo-700">
           <Plus className="w-4 h-4 mr-2" />
@@ -83,16 +83,18 @@ export function CategoryMaster() {
         </Button>
       </div>
 
-      <CommonDataTable
-        columns={columns}
-        data={categoryMasters}
-        pagination={pagination}
-        onPageChange={handlePageChange}
-        onSearchChange={setSearch}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-        loading={loading}
-      />
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden p-6">
+        <CommonDataTable
+          columns={columns}
+          data={categoryMasters}
+          pagination={pagination}
+          onPageChange={handlePageChange}
+          onSearchChange={setSearch}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          loading={loading}
+        />
+      </div>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent>
