@@ -9,8 +9,8 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
-import { Plus, Eye, Printer, Search, Trash2, Edit, Download } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger } from "../components/ui/tabs";
+import { Plus, Eye, Printer, Trash2, Edit, Download } from "lucide-react";
 import { toast } from "sonner";
 import { CommonDataTable } from "../components/ui/common-data-table";
 import { Badge } from "../components/ui/badge";
@@ -30,7 +30,6 @@ export function Products() {
   const [isInventoryOpen, setIsInventoryOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [inventoryTab, setInventoryTab] = useState("In Stock");
-  const [inventorySearch, setInventorySearch] = useState("");
 
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [formData, setFormData] = useState({
@@ -290,10 +289,6 @@ export function Products() {
     )}
   ];
 
-  const filteredInventory = currentInventory.filter(item => 
-    item.barcode.toLowerCase().includes(inventorySearch.toLowerCase()) || 
-    item.sequenceNumber.toString().includes(inventorySearch)
-  );
 
   return (
     <div className="p-6 space-y-6">
@@ -391,71 +386,45 @@ export function Products() {
       {/* INVENTORY DIALOG */}
       <Dialog open={isInventoryOpen} onOpenChange={setIsInventoryOpen}>
         <DialogContent className="sm:max-w-[900px] max-h-[90vh] flex flex-col p-0 overflow-hidden">
-            <DialogHeader className="p-6 border-b flex flex-row items-center justify-between">
-                <div>
-                    <div className="flex items-center gap-3">
-                        <DialogTitle className="text-2xl font-bold">{selectedProduct?.productCode} ({selectedProduct?.sizes?.map((s:any) => s.name).join(", ")})</DialogTitle>
-                        <Badge variant="secondary">In Stock</Badge>
-                    </div>
-                    <p className="text-sm text-gray-500">View available barcodes and stock details</p>
-                </div>
-                <div className="flex gap-2">
-                    <Button onClick={handleDownloadPDF} variant="outline" size="sm">
-                        <Download className="w-4 h-4 mr-2" /> Download PDF
-                    </Button>
-                    <Button onClick={handlePrintLabels} size="sm" className="bg-gray-900 text-white">
-                        <Printer className="w-4 h-4 mr-2" /> Print Labels
-                    </Button>
+            <DialogHeader className="p-6 border-b">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <DialogTitle className="text-xl font-bold">{selectedProduct?.productCode}</DialogTitle>
+                    <p className="text-sm text-gray-500 mt-1">Sizes: {selectedProduct?.sizes?.map((s:any) => s.name).join(", ")}</p>
+                  </div>
+                  <div className="flex gap-2">
+                      <Button onClick={handleDownloadPDF} variant="outline" size="sm">
+                          <Download className="w-4 h-4 mr-2" /> Download PDF
+                      </Button>
+                      <Button onClick={handlePrintLabels} size="sm" className="bg-gray-900 text-white">
+                          <Printer className="w-4 h-4 mr-2" /> Print Labels
+                      </Button>
+                  </div>
                 </div>
             </DialogHeader>
 
-            <div className="flex-1 overflow-hidden flex flex-col bg-gray-50">
-                <div className="p-4 border-b flex items-center justify-between bg-white">
-                    <Tabs value={inventoryTab} onValueChange={setInventoryTab} className="w-fit">
+            <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
+                <div className="p-3 border-b bg-white mb-4">
+                    <Tabs value={inventoryTab} onValueChange={setInventoryTab}>
                         <TabsList>
                             <TabsTrigger value="In Stock">In Stock</TabsTrigger>
                             <TabsTrigger value="Sold">Sold</TabsTrigger>
                         </TabsList>
                     </Tabs>
-                    <div className="relative w-64">
-                        <Input value={inventorySearch} onChange={(e) => setInventorySearch(e.target.value)} placeholder="Search barcodes..." className="pl-9 h-9 text-sm" />
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    </div>
                 </div>
-
-                <div className="flex-1 overflow-y-auto p-6">
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                        {inventoryLoading ? (
-                            <div className="col-span-full py-20 text-center text-gray-400">Loading stock...</div>
-                        ) : filteredInventory.length > 0 ? (
-                            filteredInventory.map((item: any) => (
-                                <div key={item._id} className="bg-white border rounded-lg p-4 flex flex-col items-center shadow-sm">
-                                    <div className="p-2 bg-gray-50 rounded w-full mb-3 flex justify-center">
-                                        <Barcode value={item.barcode} displayText={item.sequenceNumber.toString()} />
-                                    </div>
-                                    <div className="text-center">
-                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">#{item.sequenceNumber}</span>
-                                        <p className="text-sm font-semibold">{selectedProduct?.productCode}</p>
-                                    </div>
-                                </div>
-                            ))
-                        ) : (
-                            <div className="col-span-full text-center py-20 text-gray-400">No stock found</div>
-                        )}
-                    </div>
-                </div>
-            </div>
-
-            <div className="p-4 border-t bg-white flex items-center justify-between">
-                <div className="flex gap-6">
-                     <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-gray-400 uppercase">Stock Count</span>
-                        <span className="text-sm font-bold">{currentInventory.length} Units</span>
-                     </div>
-                     <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-gray-400 uppercase">Total Value</span>
-                        <span className="text-sm font-bold text-green-600">₹{currentInventory.length * (selectedProduct?.salePrice || 0)}</span>
-                     </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                    {inventoryLoading ? (
+                        <div className="col-span-full py-20 text-center text-gray-400">Loading stock...</div>
+                    ) : currentInventory.length > 0 ? (
+                        currentInventory.map((item: any) => (
+                            <div key={item._id} className="bg-white border rounded-lg p-3 flex flex-col items-center shadow-sm">
+                                <p className="text-xs font-bold text-gray-800 uppercase mb-2 tracking-wide">{selectedProduct?.productCode}</p>
+                                <Barcode value={item.barcode} displayText={item.sequenceNumber.toString()} />
+                            </div>
+                        ))
+                    ) : (
+                        <div className="col-span-full text-center py-20 text-gray-400">No stock found</div>
+                    )}
                 </div>
             </div>
         </DialogContent>

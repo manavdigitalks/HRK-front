@@ -143,7 +143,11 @@ export function BillingForm({ id }: { id?: string }) {
         if (group.productId === productId) {
             return {
                 ...group,
-                barcodes: group.barcodes.map((b: any) => b.barcode === barcode ? { ...b, qty: newQty } : b)
+                barcodes: group.barcodes.map((b: any) => {
+                    if (b.barcode !== barcode) return b;
+                    const clamped = Math.min(Math.max(1, newQty), b.originalQty);
+                    return { ...b, qty: clamped };
+                })
             };
         }
         return group;
@@ -346,6 +350,8 @@ export function BillingForm({ id }: { id?: string }) {
                                                                     <Input 
                                                                         type="number" 
                                                                         value={b.qty} 
+                                                                        min={1}
+                                                                        max={b.originalQty}
                                                                         onChange={(e) => updateBarcodeQty(group.productId, b.barcode, +e.target.value)}
                                                                         className="w-16 h-8 text-center font-bold text-sm"
                                                                     />
