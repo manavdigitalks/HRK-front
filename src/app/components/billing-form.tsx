@@ -51,14 +51,27 @@ export function BillingForm({ id }: { id?: string }) {
                 const existing = grouped.find(g => g.productId === prodId);
                 tempSubtotal += (item.qty * item.price);
                 if (existing) {
-                    existing.barcodes.push({ barcode: item.barcode, sequenceNumber: item.sequenceNumber, qty: item.qty, originalQty: item.qty });
+                    existing.barcodes.push({ 
+                        barcode: item.barcode, 
+                        sequenceNumber: item.sequenceNumber, 
+                        qty: item.qty, 
+                        originalQty: item.originalQty || item.qty,
+                        lostOrDefect: item.lostOrDefect || []
+                    });
                 } else {
                     grouped.push({
                         productId: prodId,
                         productName: item.productName,
                         price: item.price,
                         isExpanded: false,
-                        barcodes: [{ barcode: item.barcode, sequenceNumber: item.sequenceNumber, qty: item.qty, originalQty: item.qty }]
+                        sizes: item.product?.sizes || [],
+                        barcodes: [{ 
+                            barcode: item.barcode, 
+                            sequenceNumber: item.sequenceNumber, 
+                            qty: item.qty, 
+                            originalQty: item.originalQty || item.qty,
+                            lostOrDefect: item.lostOrDefect || []
+                        }]
                     });
                 }
             });
@@ -167,7 +180,8 @@ export function BillingForm({ id }: { id?: string }) {
         barcode: result.barcode, 
         sequenceNumber: result.sequenceNumber,
         qty: result.qty, 
-        originalQty: result.qty 
+        originalQty: result.qty,
+        lostOrDefect: []
       };
 
       if (existingGroup) {
@@ -187,6 +201,7 @@ export function BillingForm({ id }: { id?: string }) {
             productName: result.productName,
             price: result.price,
             isExpanded: true,
+            sizes: result.sizes || [],
             barcodes: [newBarcodeObj]
         }]);
       }
@@ -225,11 +240,60 @@ export function BillingForm({ id }: { id?: string }) {
                 barcodes: group.barcodes.map((b: any) => {
                     if (b.barcode !== barcode) return b;
                     const clamped = Math.min(Math.max(1, newQty), b.originalQty);
-                    return { ...b, qty: clamped };
+                    
+                    // Reset lostOrDefect if qty increases
+                    const diff = b.originalQty - clamped;
+                    let newLostOrDefect = b.lostOrDefect || [];
+                    const currentLostTotal = newLostOrDefect.reduce((s: number, l: any) => s + l.qty, 0);
+                    
+                    if (currentLostTotal > diff) {
+                        // If we have more lost items selected than the diff, we need to trim
+                        newLostOrDefect = []; // Simplest approach: reset selection if it doesn't match
+                    }
+
+                    return { ...b, qty: clamped, lostOrDefect: newLostOrDefect };
                 })
             };
         }
         return group;
+    }));
+  };
+
+  const toggleLostSize = (productId: string, barcode: string, size: any) => {
+    setItems(prevItems => prevItems.map(group => {
+      if (group.productId === productId) {
+        return {
+          ...group,
+          barcodes: group.barcodes.map((b: any) => {
+            if (b.barcode !== barcode) return b;
+            
+            const diff = b.originalQty - b.qty;
+            if (diff <= 0) return b;
+
+            const existing = b.lostOrDefect?.find((l: any) => l.size === size._id);
+            const currentTotal = b.lostOrDefect?.reduce((s: number, l: any) => s + (l.qty || 0), 0) || 0;
+
+            let newLostOrDefect = [...(b.lostOrDefect || [])];
+            
+            if (existing) {
+              // If already exists, we might want to toggle it off or increment if possible
+              // but for now let's just rotate: add 1, if max reached, remove.
+              // Actually, simpler: if exists, remove. If not exists, add 1.
+              newLostOrDefect = newLostOrDefect.filter(l => l.size !== size._id);
+            } else {
+              if (currentTotal < diff) {
+                newLostOrDefect.push({ size: size._id, name: size.name, qty: 1 });
+              } else {
+                toast.warning(`You've already accounted for all ${diff} missing pieces.`);
+                return b;
+              }
+            }
+
+            return { ...b, lostOrDefect: newLostOrDefect };
+          })
+        };
+      }
+      return group;
     }));
   };
 
@@ -277,10 +341,24 @@ export function BillingForm({ id }: { id?: string }) {
           barcode: b.barcode,
           sequenceNumber: b.sequenceNumber,
           qty: b.qty,
+          originalQty: b.originalQty,
+          lostOrDefect: b.lostOrDefect,
           price: group.price,
           total: b.qty * group.price
         }))
       ));
+
+      // Validate missing pieces are marked
+      for (const item of flattenedItems) {
+        const diff = (item.originalQty || 0) - item.qty;
+        if (diff > 0) {
+            const markedQty = item.lostOrDefect?.reduce((s: number, l: any) => s + (l.qty || 0), 0) || 0;
+            if (markedQty < diff) {
+                toast.error(`Please select sizes for the ${diff} missing pieces in ${item.productName} (ID: ${item.sequenceNumber})`);
+                return;
+            }
+        }
+      }
 
       const billingData = {
         customer: selectedCustomer,
@@ -495,29 +573,63 @@ export function BillingForm({ id }: { id?: string }) {
                                                         <div className="text-right">Total Price</div>
                                                     </div>
                                                     {group.barcodes.map((b: any) => (
-                                                        <div key={b.barcode} className="grid grid-cols-4 gap-4 items-center bg-white p-3 rounded-md border border-gray-100 shadow-sm">
-                                                            <div className="text-sm font-bold text-indigo-600">ID: {b.sequenceNumber}</div>
-                                                            <div className="flex justify-center flex-col items-center">
-                                                                <div className="flex items-center gap-2">
-                                                                    <Input 
-                                                                        type="number" 
-                                                                        value={b.qty} 
-                                                                        min={1}
-                                                                        max={b.originalQty}
-                                                                        onChange={(e) => updateBarcodeQty(group.productId, b.barcode, +e.target.value)}
-                                                                        className="w-16 h-8 text-center font-bold text-sm"
-                                                                    />
-                                                                    <span className="text-[10px] text-gray-400 font-bold">/ {b.originalQty}</span>
+                                                        <React.Fragment key={b.barcode}>
+                                                            <div className="grid grid-cols-4 gap-4 items-center bg-white p-3 rounded-md border border-gray-100 shadow-sm">
+                                                                <div className="text-sm font-bold text-indigo-600">ID: {b.sequenceNumber}</div>
+                                                                <div className="flex justify-center flex-col items-center">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <Input 
+                                                                            type="number" 
+                                                                            value={b.qty} 
+                                                                            min={1}
+                                                                            max={b.originalQty}
+                                                                            onChange={(e) => updateBarcodeQty(group.productId, b.barcode, +e.target.value)}
+                                                                            className="w-16 h-8 text-center font-bold text-sm"
+                                                                        />
+                                                                        <span className="text-[10px] text-gray-400 font-bold">/ {b.originalQty}</span>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="text-center text-sm font-semibold text-gray-500">₹{group.price}</div>
+                                                                <div className="flex items-center justify-between">
+                                                                    <div className="font-bold text-gray-900 text-sm">₹{(b.qty * group.price).toLocaleString()}</div>
+                                                                    <button onClick={() => removeBarcode(group.productId, b.barcode)} className="text-red-300 hover:text-red-500 p-2">
+                                                                        <Trash2 className="w-4 h-4" />
+                                                                    </button>
                                                                 </div>
                                                             </div>
-                                                            <div className="text-center text-sm font-semibold text-gray-500">₹{group.price}</div>
-                                                            <div className="flex items-center justify-between">
-                                                                <div className="font-bold text-gray-900 text-sm">₹{(b.qty * group.price).toLocaleString()}</div>
-                                                                <button onClick={() => removeBarcode(group.productId, b.barcode)} className="text-red-300 hover:text-red-500 p-2">
-                                                                    <Trash2 className="w-4 h-4" />
-                                                                </button>
-                                                            </div>
-                                                        </div>
+
+                                                            {b.originalQty > b.qty && (
+                                                                <div className="bg-red-50/50 p-4 rounded-md border border-red-100 mt-2 ml-4">
+                                                                    <div className="flex items-center justify-between mb-3">
+                                                                        <div className="flex flex-col">
+                                                                            <span className="text-[10px] font-bold text-red-600 uppercase tracking-widest">Select Sizes for {b.originalQty - b.qty} Missing/Defect Pieces</span>
+                                                                            <p className="text-[10px] text-gray-400 font-medium">Click on size buttons to mark them.</p>
+                                                                        </div>
+                                                                        <Badge variant="outline" className="bg-white text-red-600 border-red-200 font-bold">
+                                                                            {b.lostOrDefect?.reduce((s:number, l:any)=>s+l.qty, 0)} / {b.originalQty - b.qty} Marked
+                                                                        </Badge>
+                                                                    </div>
+                                                                    <div className="flex flex-wrap gap-2">
+                                                                        {group.sizes?.map((size: any) => {
+                                                                            const isMarked = b.lostOrDefect?.some((l: any) => l.size === size._id);
+                                                                            return (
+                                                                                <button
+                                                                                    key={size._id}
+                                                                                    onClick={() => toggleLostSize(group.productId, b.barcode, size)}
+                                                                                    className={`px-4 py-1.5 rounded text-xs font-bold transition-all border ${
+                                                                                        isMarked 
+                                                                                            ? "bg-red-600 border-red-600 text-white shadow-sm scale-105" 
+                                                                                            : "bg-white border-red-200 text-red-600 hover:border-red-400"
+                                                                                    }`}
+                                                                                >
+                                                                                    {size.name}
+                                                                                </button>
+                                                                            );
+                                                                        })}
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </React.Fragment>
                                                     ))}
                                                 </div>
                                             </td>

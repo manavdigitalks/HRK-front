@@ -272,13 +272,17 @@ export function Products() {
     { header: "Sizes", accessorKey: "sizes", cell: (item: any) => (
       <div className="flex flex-wrap gap-1">
         {item.sizes?.map((s: any, i: number) => (
-            <Badge 
-                key={i} 
-                variant={s.count === 0 ? "destructive" : "secondary"} 
-                className={`text-[9px] px-1 font-bold ${s.count === 0 ? "bg-red-50 text-red-600 border-red-100 hover:bg-red-100" : "bg-indigo-50 text-indigo-700 border-indigo-100"}`}
-            >
-              {s.name} : {s.count ?? 0}
-            </Badge>
+            <div key={i} className="flex flex-col items-center">
+                <Badge 
+                    variant={s.count === 0 ? "destructive" : "secondary"} 
+                    className={`text-[9px] px-1 font-bold ${s.count === 0 ? "bg-red-50 text-red-600 border-red-100 hover:bg-red-100" : "bg-indigo-50 text-indigo-700 border-indigo-100"}`}
+                >
+                {s.name} : {s.count ?? 0}
+                </Badge>
+                {/* {s.lostQty > 0 && (
+                    <span className="text-[8px] font-bold text-red-500 uppercase mt-0.5">Lost: {s.lostQty}</span>
+                )} */}
+            </div>
         ))}
       </div>
     )},
@@ -290,8 +294,11 @@ export function Products() {
             <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-none text-[10px] w-fit">
                 Reserved: {item.totalReserved || 0}
             </Badge>
-            <div className="text-[11px] font-bold text-gray-400 mt-1">
-                Total: {item.totalCount || 0}
+            {/* <Badge className="bg-red-100 text-red-700 hover:bg-red-100 border-none text-[10px] w-fit font-bold">
+                Defect/Lost: {item.totalLost || 0}
+            </Badge> */}
+            <div className="text-[11px] font-bold text-gray-400 mt-1 uppercase tracking-tight">
+                Total Sets: {item.totalCount || 0}
             </div>
         </div>
     )},
