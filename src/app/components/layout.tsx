@@ -41,7 +41,7 @@ const navigation = [
       { name: "Size Master", path: "/size-master", icon: Ruler },
       { name: "Category Master", path: "/category-master", icon: Package },
       { name: "Transport Master", path: "/transport-master", icon: Truck },
-      { name: "Users & Roles", path: "/users", icon: Users },
+      { name: "Users", path: "/users", icon: Users },
     ],
   },
 ];
