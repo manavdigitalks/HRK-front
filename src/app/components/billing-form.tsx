@@ -2,13 +2,14 @@
 import React, { useEffect, useState } from "react";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { fetchAllCustomers, createCustomer } from "@/redux/slices/customerSlice";
-import { scanBarcode, createBilling, updateBilling, fetchBillingById } from "@/redux/slices/billingSlice";
+import { scanBarcode, createBilling, updateBilling, fetchBillingById, fetchReservedItems } from "@/redux/slices/billingSlice";
+import api from "@/lib/axios";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Badge } from "./ui/badge";
 import { toast } from "sonner";
-import { Save, Scan, Receipt, ChevronDown, ChevronUp, Trash2, ArrowLeft, UserPlus } from "lucide-react";
+import { Save, Scan, Receipt, ChevronDown, ChevronUp, Trash2, ArrowLeft, UserPlus, PackageSearch } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Switch } from "./ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "./ui/dialog";
@@ -36,6 +37,7 @@ export function BillingForm({ id }: { id?: string }) {
   const [addCustomerOpen, setAddCustomerOpen] = useState(false);
   const [newCustomer, setNewCustomer] = useState({ name: "", number: "" });
   const [savingCustomer, setSavingCustomer] = useState(false);
+  const [reservedItems, setReservedItems] = useState<any[]>([]);
 
   useEffect(() => {
     dispatch(fetchAllCustomers({ page: 1, limit: 1000 }));
@@ -82,6 +84,14 @@ export function BillingForm({ id }: { id?: string }) {
     }
   }, [dispatch, id, router]);
 
+  useEffect(() => {
+    if (selectedCustomer) {
+      dispatch(fetchReservedItems(selectedCustomer)).unwrap().then(setReservedItems);
+    } else {
+      setReservedItems([]);
+    }
+  }, [selectedCustomer, dispatch]);
+
   const handleAddCustomer = async () => {
     if (!newCustomer.name || !newCustomer.number) {
       toast.error("Name and number required");
@@ -104,11 +114,19 @@ export function BillingForm({ id }: { id?: string }) {
   const handleScan = async () => {
     if (!barcodeInput) return;
     try {
-      const result = await dispatch(scanBarcode(barcodeInput)).unwrap();
+      const result = await dispatch(scanBarcode({ barcode: barcodeInput, customerId: selectedCustomer })).unwrap();
       
       const existingGroup = items.find(i => i.productId === result.productId);
+      const currentCount = existingGroup?.barcodes.length || 0;
+
+      // Quota check based on server data
+      if (currentCount >= result.availableQuota) {
+        toast.error(`Availability Limit: Only ${result.availableQuota} sets of ${result.productName} are available. Remaining stock is reserved.`);
+        setBarcodeInput("");
+        return;
+      }
+
       const allBarcodes = items.flatMap(g => g.barcodes.map((b: any) => b.barcode));
-      
       if (allBarcodes.includes(result.barcode)) {
         toast.warning("Already added");
         setBarcodeInput("");
@@ -170,7 +188,7 @@ export function BillingForm({ id }: { id?: string }) {
   };
 
   const updateBarcodeQty = (productId: string, barcode: string, newQty: number) => {
-    setItems(items.map(group => {
+    setItems(prevItems => prevItems.map(group => {
         if (group.productId === productId) {
             return {
                 ...group,
@@ -200,6 +218,18 @@ export function BillingForm({ id }: { id?: string }) {
       toast.error("Choose a customer!");
       return;
     }
+    // --- RESERVATION FULFILLMENT VALIDATION ---
+    for (const booking of reservedItems) {
+        const prodId = booking.product?._id || booking.product;
+        const currentInBill = items.find(g => g.productId === prodId)?.barcodes.length || 0;
+        
+        if (currentInBill < booking.totalSets) {
+            toast.error(`You have added only ${currentInBill} sets of ${booking.product?.productCode}, but ${booking.totalSets} sets were reserved. Scanning all pieces is mandatory.`);
+            return;
+        }
+    }
+    // ------------------------------------------
+
     if (items.length === 0) {
       toast.error("Add items first");
       return;
@@ -224,7 +254,7 @@ export function BillingForm({ id }: { id?: string }) {
         subtotal: subtotal,
         discountPercent: discount,
         gstEnabled: gstEnabled,
-        gstPercent: gstPercent, // Store the setting even if disabled
+        gstPercent: gstPercent, 
         totalAmount: total
       };
 
@@ -253,7 +283,6 @@ export function BillingForm({ id }: { id?: string }) {
 
   return (
     <div className="p-4 lg:p-6 space-y-6 bg-gray-50 min-h-screen">
-      {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-white p-5 rounded-lg border shadow-sm gap-4">
         <div className="flex items-center gap-4">
             <Button variant="outline" size="icon" onClick={() => router.push("/billing")} title="Go Back">
@@ -273,7 +302,6 @@ export function BillingForm({ id }: { id?: string }) {
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <div className="lg:col-span-3 space-y-6">
-            {/* Input Section */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white p-6 rounded-lg border shadow-sm">
               <div className="space-y-2">
                 <Label className="text-sm font-bold text-gray-700">Select Customer</Label>
@@ -314,7 +342,31 @@ export function BillingForm({ id }: { id?: string }) {
               </div>
             </div>
 
-            {/* List of Scanned Items */}
+            {reservedItems.length > 0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-5 space-y-3 shadow-sm">
+                    <div className="flex items-center gap-3 border-b border-amber-200 pb-2">
+                        <PackageSearch className="w-5 h-5 text-amber-600" />
+                        <h3 className="text-sm font-bold text-amber-900">Reserved Products For This Customer</h3>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                        {reservedItems.map((booking, idx) => (
+                            <div key={idx} className="bg-white p-3 rounded-md border border-amber-200 flex flex-col justify-center">
+                                <div className="flex justify-between items-start mb-1">
+                                    <p className="text-sm font-bold text-gray-800">{booking.product?.productCode}</p>
+                                    <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-300 font-bold text-[10px] px-1.5 py-0">
+                                        {booking.totalSets} Sets
+                                    </Badge>
+                                </div>
+                                <p className="text-[10px] text-gray-500 uppercase truncate">
+                                    {booking.product?.sizes?.map((s:any)=>s.name).join(", ")}
+                                </p>
+                            </div>
+                        ))}
+                    </div>
+                    <p className="text-[10px] text-amber-600 font-medium">* Scan any barcodes for these products manually. System will enforce the reservation limit.</p>
+                </div>
+            )}
+
             <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
                 <div className="p-4 border-b bg-gray-50/50">
                     <h2 className="font-bold text-gray-800">Scanned Products</h2>
@@ -421,7 +473,6 @@ export function BillingForm({ id }: { id?: string }) {
             </div>
         </div>
 
-        {/* Bill Summary Right Panel */}
         <div className="lg:col-span-1">
             <div className="bg-white rounded-lg p-6 border shadow-sm sticky top-6 space-y-6">
                 <div>

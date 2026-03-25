@@ -30,6 +30,7 @@ const navigation = [
   { name: "Stock Entry", path: "/stock-entry", icon: PackagePlus },
   { name: "Customers", path: "/customers", icon: UserCircle },
   { name: "Packing Slip", path: "/billing", icon: ShoppingCart },
+  { name: "Order Form (Hold)", path: "/order-form", icon: PackagePlus },
   { name: "Returns", path: "/returns", icon: RefreshCw },
   { name: "Reports", path: "/reports", icon: BarChart3 },
   {

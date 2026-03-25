@@ -282,6 +282,19 @@ export function Products() {
         ))}
       </div>
     )},
+    { header: "Stock Status", accessorKey: "inventory", cell: (item: any) => (
+        <div className="flex flex-col gap-1">
+            <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-none text-[10px] w-fit">
+                Available: {item.totalInStock || 0}
+            </Badge>
+            <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-none text-[10px] w-fit">
+                Reserved: {item.totalReserved || 0}
+            </Badge>
+            <div className="text-[11px] font-bold text-gray-400 mt-1">
+                Total: {item.totalCount || 0}
+            </div>
+        </div>
+    )},
     { header: "Actions", accessorKey: "actions", cell: (item: any) => (
         <div className="flex items-center gap-1">
             <Button onClick={() => handleViewInventory(item)} variant="outline" size="icon" className="h-8 w-8 text-indigo-600" title="View Stock"><Eye className="w-4 h-4" /></Button>

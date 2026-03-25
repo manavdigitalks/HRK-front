@@ -57,8 +57,13 @@ export const deleteBilling = createAsyncThunk('billing/delete', async (id: strin
   return id;
 });
 
-export const scanBarcode = createAsyncThunk('billing/scan', async (barcode: string) => {
-  const response = await api.get(`/billing/scan/${barcode}`);
+export const scanBarcode = createAsyncThunk('billing/scan', async ({ barcode, customerId, alreadyScanned }: { barcode: string; customerId?: string; alreadyScanned?: number }) => {
+  const response = await api.get(`/billing/scan/${barcode}`, { params: { customerId, alreadyScanned } });
+  return response.data.data;
+});
+
+export const fetchReservedItems = createAsyncThunk('billing/fetchReserved', async (customerId: string) => {
+  const response = await api.get(`/order-booking/all`, { params: { customerId, status: "Hold" } });
   return response.data.data;
 });
 
