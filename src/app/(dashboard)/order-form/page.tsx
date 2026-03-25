@@ -47,7 +47,7 @@ export default function OrderFormPage() {
       header: "Product Detail", accessorKey: "product", cell: (item: any) => (
         <div className="flex flex-col">
           <span className="font-semibold">{item.product?.productCode}</span>
-          <span className="text-xs text-indigo-500 font-medium">Design: {item.product?.designNo}</span>
+          {/* <span className="text-xs text-indigo-500 font-medium">Design: {item.product?.designNo}</span> */}
         </div>
       )
     },
@@ -97,8 +97,8 @@ export default function OrderFormPage() {
     <div className="p-4 lg:p-6 space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Order Form (Reservations)</h1>
-          <p className="text-gray-500 mt-1">Manage customer reservations and product holds.</p>
+          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Order Form</h1>
+          {/* <p className="text-gray-500 mt-1">Manage customer reservations and product holds.</p> */}
         </div>
         <Button onClick={() => router.push("/order-form/new")} className="bg-indigo-600 hover:bg-indigo-700 font-bold px-8">
           <Receipt className="w-4 h-4 mr-2" />

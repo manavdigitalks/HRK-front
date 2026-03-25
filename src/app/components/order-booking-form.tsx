@@ -67,7 +67,7 @@ export function OrderBookingForm({ id, initialData }: { id?: string; initialData
         <Button variant="outline" size="icon" onClick={() => router.push("/order-form")}>
           <ArrowLeft className="w-4 h-4" />
         </Button>
-        <h1 className="text-2xl font-bold text-gray-900">{id ? "Edit Order Reservation" : "New Order Reservation"}</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{id ? "Edit Order Form" : "New Order Form"}</h1>
       </div>
 
       <div className="space-y-4 py-4">

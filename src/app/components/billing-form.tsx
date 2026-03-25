@@ -346,7 +346,7 @@ export function BillingForm({ id }: { id?: string }) {
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-5 space-y-3 shadow-sm">
                     <div className="flex items-center gap-3 border-b border-amber-200 pb-2">
                         <PackageSearch className="w-5 h-5 text-amber-600" />
-                        <h3 className="text-sm font-bold text-amber-900">Reserved Products For This Customer</h3>
+                        <h3 className="text-sm font-bold text-amber-900">Order Form</h3>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
                         {reservedItems.map((booking, idx) => (
@@ -363,7 +363,7 @@ export function BillingForm({ id }: { id?: string }) {
                             </div>
                         ))}
                     </div>
-                    <p className="text-[10px] text-amber-600 font-medium">* Scan any barcodes for these products manually. System will enforce the reservation limit.</p>
+                    {/* <p className="text-[10px] text-amber-600 font-medium">* Scan any barcodes for these products manually. System will enforce the reservation limit.</p> */}
                 </div>
             )}
 
