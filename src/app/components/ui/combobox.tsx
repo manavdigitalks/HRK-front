@@ -28,6 +28,7 @@ interface ComboboxProps {
   disabled?: boolean
   className?: string
   allowCustomValue?: boolean
+  onSearchChange?: (value: string) => void
 }
 
 export function Combobox({
@@ -39,9 +40,25 @@ export function Combobox({
   disabled = false,
   className,
   allowCustomValue = false,
+  onSearchChange,
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false)
   const [searchValue, setSearchValue] = React.useState("")
+  const onSearchChangeRef = React.useRef(onSearchChange);
+
+  React.useEffect(() => {
+    onSearchChangeRef.current = onSearchChange;
+  }, [onSearchChange]);
+
+  React.useEffect(() => {
+    if (!onSearchChangeRef.current) return;
+    
+    const handler = setTimeout(() => {
+      onSearchChangeRef.current?.(searchValue);
+    }, 300);
+
+    return () => clearTimeout(handler);
+  }, [searchValue]);
 
   const findLabel = (val: string) => {
     return options.find((option) => option.value.toLowerCase() === val.toLowerCase())?.label || val;

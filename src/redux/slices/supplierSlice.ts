@@ -39,10 +39,15 @@ export const fetchAllSuppliers = createAsyncThunk(
   }
 );
 
-export const fetchSupplierDropdown = createAsyncThunk('supplier/fetchDropdown', async () => {
-    const response = await api.get('/supplier/dropdown');
+export const fetchSupplierDropdown = createAsyncThunk(
+  'supplier/fetchDropdown',
+  async (search?: string) => {
+    const response = await api.get('/supplier/dropdown', {
+      params: { search },
+    });
     return response.data.data;
-  });
+  }
+);
 
 export const fetchSupplierById = createAsyncThunk('supplier/fetchById', async (id: string) => {
   const response = await api.get(`/supplier/${id}`);
@@ -88,15 +93,15 @@ const supplierSlice = createSlice({
       .addCase(fetchSupplierById.fulfilled, (state, action) => {
         state.currentSupplier = action.payload;
       })
-      .addCase(createSupplier.fulfilled, (state, action) => {
+      .addCase(createSupplier.fulfilled, () => {
         // state.suppliers.unshift(action.payload);
       })
       .addCase(updateSupplier.fulfilled, (state, action) => {
-        const index = state.suppliers.findIndex((c) => c._id === action.payload._id);
+        const index = state.suppliers.findIndex((c: any) => c._id === action.payload._id);
         if (index !== -1) state.suppliers[index] = action.payload;
       })
       .addCase(deleteSupplier.fulfilled, (state, action) => {
-        state.suppliers = state.suppliers.filter((c) => c._id !== action.payload);
+        state.suppliers = state.suppliers.filter((c: any) => c._id !== action.payload);
       });
   },
 });

@@ -1,9 +1,8 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
-import { fetchAllCustomers, createCustomer } from "@/redux/slices/customerSlice";
+import { fetchCustomerDropdown, createCustomer } from "@/redux/slices/customerSlice";
 import { scanBarcode, createBilling, updateBilling, fetchBillingById, fetchReservedItems } from "@/redux/slices/billingSlice";
-import api from "@/lib/axios";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -19,11 +18,11 @@ import { Combobox } from "./ui/combobox";
 export function BillingForm({ id }: { id?: string }) {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const { customers } = useAppSelector((state) => state.customer);
+  const { dropdownItems: customers } = useAppSelector((state) => state.customer);
   
   // Format customers for Combobox
   const customerOptions = customers.map((c: any) => ({
-    label: `${c.name} (${c.number || c.phone})`,
+    label: `${c.name} ${c.number ? `(${c.number})` : ""}`,
     value: c._id
   }));
 
@@ -40,7 +39,7 @@ export function BillingForm({ id }: { id?: string }) {
   const [reservedItems, setReservedItems] = useState<any[]>([]);
 
   useEffect(() => {
-    dispatch(fetchAllCustomers({ page: 1, limit: 1000 }));
+    dispatch(fetchCustomerDropdown(""));
     if (id) {
         setLoading(true);
         dispatch(fetchBillingById(id)).unwrap().then((bill: any) => {
@@ -310,6 +309,7 @@ export function BillingForm({ id }: { id?: string }) {
                     options={customerOptions}
                     value={selectedCustomer}
                     onChange={setSelectedCustomer}
+                    onSearchChange={(val) => dispatch(fetchCustomerDropdown(val))}
                     placeholder="Search Customer..."
                     className="flex-1"
                   />

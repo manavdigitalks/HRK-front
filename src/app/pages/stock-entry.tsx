@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
-import { fetchAllProducts } from "@/redux/slices/productSlice";
+import { fetchProductDropdown } from "@/redux/slices/productSlice";
 import { createStockEntry, fetchAllStockEntries, deleteStockEntry, fetchStockEntryInventory } from "@/redux/slices/stockEntrySlice";
 import { fetchSupplierDropdown } from "@/redux/slices/supplierSlice";
 import { Button } from "../components/ui/button";
@@ -29,7 +29,7 @@ import { Combobox } from "../components/ui/combobox";
 export function StockEntry() {
   const dispatch = useAppDispatch();
   const { entries, loading, pagination } = useAppSelector((state) => state.stockEntry);
-  const { products } = useAppSelector((state) => state.product);
+  const { dropdownItems: products } = useAppSelector((state) => state.product);
   const { dropdownOptions: suppliers } = useAppSelector((state) => state.supplier);
 
   // Format options for Combobox
@@ -48,8 +48,8 @@ export function StockEntry() {
 
   useEffect(() => {
     dispatch(fetchAllStockEntries({ page: 1, limit: 10 }));
-    dispatch(fetchAllProducts({ page: 1, limit: 100 }));
-    dispatch(fetchSupplierDropdown());
+    dispatch(fetchProductDropdown(""));
+    dispatch(fetchSupplierDropdown(""));
   }, [dispatch]);
 
   const handlePageChange = (page: number) => {
@@ -250,6 +250,7 @@ export function StockEntry() {
                 options={supplierOptions}
                 value={formData.supplier}
                 onChange={(val) => setFormData({...formData, supplier: val})}
+                onSearchChange={(val) => dispatch(fetchSupplierDropdown(val))}
                 placeholder="Select Supplier"
               />
             </div>
@@ -260,6 +261,7 @@ export function StockEntry() {
                 options={productOptions}
                 value={formData.product}
                 onChange={handleProductChange}
+                onSearchChange={(val) => dispatch(fetchProductDropdown(val))}
                 placeholder="Search Product..."
               />
             </div>

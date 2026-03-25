@@ -3,6 +3,7 @@ import api from '@/lib/axios';
 
 interface CustomerState {
   customers: any[];
+  dropdownItems: any[];
   currentCustomer: any;
   pagination: {
     totalRecords: number;
@@ -16,6 +17,7 @@ interface CustomerState {
 
 const initialState: CustomerState = {
   customers: [],
+  dropdownItems: [],
   currentCustomer: null,
   pagination: {
     totalRecords: 0,
@@ -34,6 +36,16 @@ export const fetchAllCustomers = createAsyncThunk(
       params: { page, limit, search },
     });
     return response.data;
+  }
+);
+
+export const fetchCustomerDropdown = createAsyncThunk(
+  'customer/fetchDropdown',
+  async (search?: string) => {
+    const response = await api.get('/customer/dropdown', {
+      params: { search },
+    });
+    return response.data.data;
   }
 );
 
@@ -74,6 +86,9 @@ const customerSlice = createSlice({
       .addCase(fetchAllCustomers.rejected, (state, action) => {
         state.loading = false;
         state.error = action.error.message || 'Failed to fetch customers';
+      })
+      .addCase(fetchCustomerDropdown.fulfilled, (state, action) => {
+        state.dropdownItems = action.payload;
       })
       .addCase(fetchCustomerById.fulfilled, (state, action) => {
         state.currentCustomer = action.payload;

@@ -3,6 +3,7 @@ import api from '@/lib/axios';
 
 interface SizeMasterState {
   sizeMasters: any[];
+  dropdownItems: any[];
   currentSizeMaster: any;
   pagination: {
     totalRecords: number;
@@ -16,6 +17,7 @@ interface SizeMasterState {
 
 const initialState: SizeMasterState = {
   sizeMasters: [],
+  dropdownItems: [],
   currentSizeMaster: null,
   pagination: {
     totalRecords: 0,
@@ -57,10 +59,15 @@ export const deleteSizeMaster = createAsyncThunk('sizeMaster/delete', async (id:
   return id;
 });
 
-export const fetchSizeDropdown = createAsyncThunk('sizeMaster/fetchDropdown', async () => {
-  const response = await api.get('/sizemaster/dropdown');
-  return response.data.data;
-});
+export const fetchSizeDropdown = createAsyncThunk(
+  'sizeMaster/fetchDropdown',
+  async (search?: string) => {
+    const response = await api.get('/sizemaster/dropdown', {
+      params: { search },
+    });
+    return response.data.data;
+  }
+);
 
 const sizeMasterSlice = createSlice({
   name: 'sizeMaster',
@@ -92,6 +99,9 @@ const sizeMasterSlice = createSlice({
       })
       .addCase(deleteSizeMaster.fulfilled, (state, action) => {
         state.sizeMasters = state.sizeMasters.filter((s) => s._id !== action.payload);
+      })
+      .addCase(fetchSizeDropdown.fulfilled, (state, action) => {
+        state.dropdownItems = action.payload;
       });
   },
 });

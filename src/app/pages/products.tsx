@@ -25,8 +25,8 @@ export function Products() {
   const { products, loading, pagination } = useAppSelector((state) => state.product);
   const { currentInventory, inventoryLoading } = useAppSelector((state) => state.stockEntry);
   
-  const [categories, setCategories] = useState<any[]>([]);
-  const [sizes, setSizes] = useState<any[]>([]);
+  const { dropdownItems: categories } = useAppSelector((state) => state.categoryMaster);
+  const { dropdownItems: sizes } = useAppSelector((state) => state.sizeMaster);
 
   // Format options for Combobox
   const categoryOptions = categories.map((cat: any) => ({ label: cat.name, value: cat._id }));
@@ -49,8 +49,8 @@ export function Products() {
 
   useEffect(() => {
     dispatch(fetchAllProducts({ page: 1, limit: 10, search }));
-    dispatch(fetchCategoryDropdown()).unwrap().then(setCategories);
-    dispatch(fetchSizeDropdown()).unwrap().then(setSizes);
+    dispatch(fetchCategoryDropdown(""));
+    dispatch(fetchSizeDropdown(""));
   }, [dispatch, search]);
 
   useEffect(() => {
@@ -354,6 +354,7 @@ export function Products() {
                   options={categoryOptions}
                   value={formData.category}
                   onChange={(val) => setFormData({...formData, category: val})}
+                  onSearchChange={(val) => dispatch(fetchCategoryDropdown(val))}
                   placeholder="Select Category"
                 />
             </div>

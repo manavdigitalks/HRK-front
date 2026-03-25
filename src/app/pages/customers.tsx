@@ -17,7 +17,7 @@ import api from "@/lib/axios";
 export function Customers() {
   const dispatch = useAppDispatch();
   const { customers, loading, pagination } = useAppSelector((state) => state.customer);
-  const [transports, setTransports] = useState<any[]>([]);
+  const { dropdownItems: transports } = useAppSelector((state) => state.transportMaster);
   
   const [allStates, setAllStates] = useState<string[]>([]);
   const [allCities, setAllCities] = useState<string[]>([]);
@@ -57,7 +57,7 @@ export function Customers() {
 
   useEffect(() => {
     dispatch(fetchAllCustomers({ page: 1, limit: 10, search }));
-    dispatch(fetchTransportDropdown()).unwrap().then(setTransports);
+    dispatch(fetchTransportDropdown(""));
     
     // Fetch initial states
     api.get("/location/states").then(res => {
@@ -238,6 +238,7 @@ export function Customers() {
                 options={transports.map((t: any) => ({ label: t.name, value: t._id }))}
                 value={formData.transport}
                 onChange={(val) => setFormData({...formData, transport: val})}
+                onSearchChange={(val) => dispatch(fetchTransportDropdown(val))}
                 placeholder="Select Transport"
                 className="w-full"
               />

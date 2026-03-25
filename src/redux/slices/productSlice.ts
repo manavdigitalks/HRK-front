@@ -3,6 +3,7 @@ import api from '@/lib/axios';
 
 interface ProductState {
   products: any[];
+  dropdownItems: any[];
   currentProduct: any;
   pagination: {
     totalRecords: number;
@@ -16,6 +17,7 @@ interface ProductState {
 
 const initialState: ProductState = {
   products: [],
+  dropdownItems: [],
   currentProduct: null,
   pagination: {
     totalRecords: 0,
@@ -34,6 +36,16 @@ export const fetchAllProducts = createAsyncThunk(
       params: { page, limit, search },
     });
     return response.data;
+  }
+);
+
+export const fetchProductDropdown = createAsyncThunk(
+  'product/fetchDropdown',
+  async (search?: string) => {
+    const response = await api.get('/product/dropdown', {
+      params: { search },
+    });
+    return response.data.data;
   }
 );
 
@@ -74,6 +86,9 @@ const productSlice = createSlice({
       .addCase(fetchAllProducts.rejected, (state, action) => {
         state.loading = false;
         state.error = action.error.message || 'Failed to fetch products';
+      })
+      .addCase(fetchProductDropdown.fulfilled, (state, action) => {
+        state.dropdownItems = action.payload;
       })
       .addCase(fetchProductById.fulfilled, (state, action) => {
         state.currentProduct = action.payload;

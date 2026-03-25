@@ -1,8 +1,8 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
-import { fetchAllCustomers } from "@/redux/slices/customerSlice";
-import { fetchAllProducts } from "@/redux/slices/productSlice";
+import { fetchCustomerDropdown } from "@/redux/slices/customerSlice";
+import { fetchProductDropdown } from "@/redux/slices/productSlice";
 import { createOrderBooking, updateOrderBooking } from "@/redux/slices/orderBookingSlice";
 import { Button } from "./ui/button";
 import { Label } from "./ui/label";
@@ -15,8 +15,8 @@ import { Combobox } from "./ui/combobox";
 export function OrderBookingForm({ id, initialData }: { id?: string; initialData?: any }) {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const { customers } = useAppSelector((state) => state.customer);
-  const { products } = useAppSelector((state) => state.product);
+  const { dropdownItems: customers } = useAppSelector((state) => state.customer);
+  const { dropdownItems: products } = useAppSelector((state) => state.product);
 
   const [customer, setCustomer] = useState(initialData?.customer?._id || "");
   const [product, setProduct] = useState(initialData?.product?._id || "");
@@ -24,12 +24,12 @@ export function OrderBookingForm({ id, initialData }: { id?: string; initialData
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    dispatch(fetchAllCustomers({ page: 1, limit: 1000 }));
-    dispatch(fetchAllProducts({ page: 1, limit: 1000 }));
+    dispatch(fetchCustomerDropdown(""));
+    dispatch(fetchProductDropdown(""));
   }, [dispatch]);
 
   const customerOptions = customers.map((c: any) => ({
-    label: `${c.name} (${c.number || c.phone})`,
+    label: `${c.name} ${c.number ? `(${c.number})` : ""}`,
     value: c._id,
   }));
 
@@ -77,6 +77,7 @@ export function OrderBookingForm({ id, initialData }: { id?: string; initialData
             options={customerOptions}
             value={customer}
             onChange={setCustomer}
+            onSearchChange={(val) => dispatch(fetchCustomerDropdown(val))}
             placeholder="Search Customer..."
             disabled={!!id}
           />
@@ -88,6 +89,7 @@ export function OrderBookingForm({ id, initialData }: { id?: string; initialData
             options={productOptions}
             value={product}
             onChange={setProduct}
+            onSearchChange={(val) => dispatch(fetchProductDropdown(val))}
             placeholder="Search Product..."
             disabled={!!id}
           />

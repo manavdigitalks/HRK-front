@@ -3,6 +3,7 @@ import api from '@/lib/axios';
 
 interface TransportMasterState {
   transportMasters: any[];
+  dropdownItems: any[];
   currentTransportMaster: any;
   pagination: {
     totalRecords: number;
@@ -16,6 +17,7 @@ interface TransportMasterState {
 
 const initialState: TransportMasterState = {
   transportMasters: [],
+  dropdownItems: [],
   currentTransportMaster: null,
   pagination: {
     totalRecords: 0,
@@ -57,10 +59,15 @@ export const deleteTransportMaster = createAsyncThunk('transportMaster/delete', 
   return id;
 });
 
-export const fetchTransportDropdown = createAsyncThunk('transportMaster/fetchDropdown', async () => {
-  const response = await api.get('/transportmaster/dropdown');
-  return response.data.data;
-});
+export const fetchTransportDropdown = createAsyncThunk(
+  'transportMaster/fetchDropdown',
+  async (search?: string) => {
+    const response = await api.get('/transportmaster/dropdown', {
+      params: { search },
+    });
+    return response.data.data;
+  }
+);
 
 const transportMasterSlice = createSlice({
   name: 'transportMaster',
@@ -92,6 +99,9 @@ const transportMasterSlice = createSlice({
       })
       .addCase(deleteTransportMaster.fulfilled, (state, action) => {
         state.transportMasters = state.transportMasters.filter((s) => s._id !== action.payload);
+      })
+      .addCase(fetchTransportDropdown.fulfilled, (state, action) => {
+        state.dropdownItems = action.payload;
       });
   },
 });
