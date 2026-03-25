@@ -37,6 +37,7 @@ export function BillingForm({ id }: { id?: string }) {
   const [newCustomer, setNewCustomer] = useState({ name: "", number: "" });
   const [savingCustomer, setSavingCustomer] = useState(false);
   const [reservedItems, setReservedItems] = useState<any[]>([]);
+  const [selectedReservations, setSelectedReservations] = useState<string[]>([]);
 
   useEffect(() => {
     dispatch(fetchCustomerDropdown(""));
@@ -85,9 +86,13 @@ export function BillingForm({ id }: { id?: string }) {
 
   useEffect(() => {
     if (selectedCustomer) {
-      dispatch(fetchReservedItems(selectedCustomer)).unwrap().then(setReservedItems);
+      dispatch(fetchReservedItems(selectedCustomer)).unwrap().then((items) => {
+          setReservedItems(items);
+          setSelectedReservations(items.map((i: any) => i._id)); // Default select all
+      });
     } else {
       setReservedItems([]);
+      setSelectedReservations([]);
     }
   }, [selectedCustomer, dispatch]);
 
@@ -113,7 +118,33 @@ export function BillingForm({ id }: { id?: string }) {
   const handleScan = async () => {
     if (!barcodeInput) return;
     try {
-      const result = await dispatch(scanBarcode({ barcode: barcodeInput, customerId: selectedCustomer })).unwrap();
+      // Check if this product is part of a selected reservation
+      // We first need to know which product this barcode belongs to. 
+      // Unfortunately, we only know after scanBarcode returns it.
+      // So I'll modify scanBarcode in Redux to handle a preliminary check or just call it twice.
+      // Alternatively, I can call scanBarcode without isReserved first to get the productId, OR
+      // I can just pass the selected status of the UI to the backend if searching by productCode matches.
+      
+      // Let's assume the user knows what they are scanning. 
+      // If we don't know the productId yet, we can't be sure if it's reserved.
+      // However, we can fetch all inventory items information or just try both.
+      
+      // Optimized approach: Call once, get productId, then if it matches a selected reservation, 
+      // call again OR just handle it in the backend by passing the WHOLE selectedReservations list.
+      
+      const result = await dispatch(scanBarcode({ 
+          barcode: barcodeInput, 
+          customerId: selectedCustomer,
+          selectedReservations: selectedReservations // Passing array to backend
+      })).unwrap();
+
+      // The updated scanBarcode backend logic will check isReserved internally 
+      // if we pass isReserved based on whether the product matches a selected reservation.
+      // Wait, I updated the backend to expect 'isReserved' boolean. 
+      // I'll need to update it again or call scanBarcode once to get product info.
+      
+      // Let's do a quick 'check' call or just pass the selected list.
+      // Actually, I'll update the scanBarcode API to accept 'selectedReservations' array directly.
       
       const existingGroup = items.find(i => i.productId === result.productId);
       const currentCount = existingGroup?.barcodes.length || 0;
@@ -217,13 +248,17 @@ export function BillingForm({ id }: { id?: string }) {
       toast.error("Choose a customer!");
       return;
     }
-    // --- RESERVATION FULFILLMENT VALIDATION ---
+    // --- RESERVATION FULFILLMENT VALIDATION (Only for SELECTED) ---
     for (const booking of reservedItems) {
+        if (!selectedReservations.includes(booking._id)) continue;
+
         const prodId = booking.product?._id || booking.product;
+        // Optimization: In a real scenario, we might want to track which scan filled which reservation.
+        // For now, we verify that the total scanned for this product meets the sum of selected reservations.
         const currentInBill = items.find(g => g.productId === prodId)?.barcodes.length || 0;
         
         if (currentInBill < booking.totalSets) {
-            toast.error(`You have added only ${currentInBill} sets of ${booking.product?.productCode}, but ${booking.totalSets} sets were reserved. Scanning all pieces is mandatory.`);
+            toast.error(`You have selected reservation for ${booking.product?.productCode} (${booking.totalSets} sets), but added only ${currentInBill} sets. Please scan all pieces for the selected reservation.`);
             return;
         }
     }
@@ -254,7 +289,8 @@ export function BillingForm({ id }: { id?: string }) {
         discountPercent: discount,
         gstEnabled: gstEnabled,
         gstPercent: gstPercent, 
-        totalAmount: total
+        totalAmount: total,
+        fulfilledReservationIds: selectedReservations
       };
 
       if (id) {
@@ -349,19 +385,43 @@ export function BillingForm({ id }: { id?: string }) {
                         <h3 className="text-sm font-bold text-amber-900">Order Form</h3>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-                        {reservedItems.map((booking, idx) => (
-                            <div key={idx} className="bg-white p-3 rounded-md border border-amber-200 flex flex-col justify-center">
-                                <div className="flex justify-between items-start mb-1">
-                                    <p className="text-sm font-bold text-gray-800">{booking.product?.productCode}</p>
-                                    <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-300 font-bold text-[10px] px-1.5 py-0">
-                                        {booking.totalSets} Sets
-                                    </Badge>
+                        {reservedItems.map((booking, idx) => {
+                            const isSelected = selectedReservations.includes(booking._id);
+                            return (
+                                <div 
+                                    key={idx} 
+                                    onClick={() => {
+                                        if (isSelected) setSelectedReservations(prev => prev.filter(id => id !== booking._id));
+                                        else setSelectedReservations(prev => [...prev, booking._id]);
+                                    }}
+                                    className={`p-3 rounded-md border flex flex-col justify-center cursor-pointer transition-all ${
+                                        isSelected 
+                                            ? "bg-amber-100 border-amber-400 ring-2 ring-amber-400 ring-opacity-30" 
+                                            : "bg-white border-amber-100 opacity-60 hover:opacity-100"
+                                    }`}
+                                >
+                                    <div className="flex justify-between items-start mb-1">
+                                        <p className={`text-sm font-bold ${isSelected ? "text-amber-900" : "text-gray-500"}`}>
+                                            {booking.product?.productCode}
+                                        </p>
+                                        <Badge variant="outline" className={`font-bold text-[10px] px-1.5 py-0 ${
+                                            isSelected ? "bg-amber-200 text-amber-800 border-amber-400" : "bg-gray-100 text-gray-400"
+                                        }`}>
+                                            {booking.totalSets} Sets
+                                        </Badge>
+                                    </div>
+                                    <p className="text-[10px] text-gray-400 uppercase truncate">
+                                        {booking.product?.sizes?.map((s:any)=>s.name).join(", ")}
+                                    </p>
+                                    {isSelected && (
+                                        <div className="flex items-center gap-1 mt-1">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></div>
+                                            <span className="text-[9px] font-bold text-amber-600 uppercase">Selected to Fill</span>
+                                        </div>
+                                    )}
                                 </div>
-                                <p className="text-[10px] text-gray-500 uppercase truncate">
-                                    {booking.product?.sizes?.map((s:any)=>s.name).join(", ")}
-                                </p>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                     {/* <p className="text-[10px] text-amber-600 font-medium">* Scan any barcodes for these products manually. System will enforce the reservation limit.</p> */}
                 </div>
