@@ -322,7 +322,7 @@ export function BillingForm({ id }: { id?: string }) {
         const currentInBill = items.find(g => g.productId === prodId)?.barcodes.length || 0;
         
         if (currentInBill < booking.totalSets) {
-            toast.error(`You have selected reservation for ${booking.product?.productCode} (${booking.totalSets} sets), but added only ${currentInBill} sets. Please scan all pieces for the selected reservation.`);
+            toast.error(`You have selected order for ${booking.product?.productCode} (${booking.totalSets} sets), but added only ${currentInBill} sets. Please scan all pieces for the selected order.`);
             return;
         }
     }

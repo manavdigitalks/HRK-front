@@ -26,9 +26,9 @@ export default function OrderFormPage() {
     if (window.confirm("Are you sure? This will release reserved items back to stock.")) {
       try {
         await dispatch(deleteOrderBooking(id)).unwrap();
-        toast.success("Reservation cancelled and items restored to stock");
+        toast.success("Order cancelled and items restored to stock");
       } catch (err: any) {
-        toast.error(err.message || "Failed to cancel reservation");
+        toast.error(err.message || "Failed to cancel order");
       }
     }
   };
@@ -51,7 +51,7 @@ export default function OrderFormPage() {
         </div>
       )
     },
-    { header: "Reserved Sets", accessorKey: "totalSets", cell: (item: any) => <span className="font-bold">{item.totalSets} Sets</span> },
+    { header: "Order sets", accessorKey: "totalSets", cell: (item: any) => <span className="font-bold">{item.totalSets} Sets</span> },
     { 
       header: "Status", 
       accessorKey: "status", 
@@ -102,7 +102,7 @@ export default function OrderFormPage() {
         </div>
         <Button onClick={() => router.push("/order-form/new")} className="bg-indigo-600 hover:bg-indigo-700 font-bold px-8">
           <Receipt className="w-4 h-4 mr-2" />
-          Add Reservation
+          Add Order
         </Button>
       </div>
 
