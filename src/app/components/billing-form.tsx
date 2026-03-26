@@ -55,7 +55,7 @@ export function BillingForm({ id }: { id?: string }) {
                         barcode: item.barcode, 
                         sequenceNumber: item.sequenceNumber, 
                         qty: item.qty, 
-                        originalQty: item.originalQty || item.qty,
+                        originalQty: item.originalQty || Math.max(item.qty + (item.lostOrDefect?.length || 0), (item.product?.sizes?.length || 0)),
                         lostOrDefect: item.lostOrDefect || []
                     });
                 } else {
@@ -69,7 +69,7 @@ export function BillingForm({ id }: { id?: string }) {
                             barcode: item.barcode, 
                             sequenceNumber: item.sequenceNumber, 
                             qty: item.qty, 
-                            originalQty: item.originalQty || item.qty,
+                            originalQty: item.originalQty || Math.max(item.qty + (item.lostOrDefect?.length || 0), (item.product?.sizes?.length || 0)),
                             lostOrDefect: item.lostOrDefect || []
                         }]
                     });
@@ -270,7 +270,7 @@ export function BillingForm({ id }: { id?: string }) {
             const diff = b.originalQty - b.qty;
             if (diff <= 0) return b;
 
-            const existing = b.lostOrDefect?.find((l: any) => l.size === size._id);
+            const existing = b.lostOrDefect?.find((l: any) => String(l.size) === String(size._id));
             const currentTotal = b.lostOrDefect?.reduce((s: number, l: any) => s + (l.qty || 0), 0) || 0;
 
             let newLostOrDefect = [...(b.lostOrDefect || [])];
@@ -279,7 +279,7 @@ export function BillingForm({ id }: { id?: string }) {
               // If already exists, we might want to toggle it off or increment if possible
               // but for now let's just rotate: add 1, if max reached, remove.
               // Actually, simpler: if exists, remove. If not exists, add 1.
-              newLostOrDefect = newLostOrDefect.filter(l => l.size !== size._id);
+              newLostOrDefect = newLostOrDefect.filter(l => String(l.size) !== String(size._id));
             } else {
               if (currentTotal < diff) {
                 newLostOrDefect.push({ size: size._id, name: size.name, qty: 1 });
@@ -610,22 +610,32 @@ export function BillingForm({ id }: { id?: string }) {
                                                                         </Badge>
                                                                     </div>
                                                                     <div className="flex flex-wrap gap-2">
-                                                                        {group.sizes?.map((size: any) => {
-                                                                            const isMarked = b.lostOrDefect?.some((l: any) => l.size === size._id);
-                                                                            return (
-                                                                                <button
-                                                                                    key={size._id}
-                                                                                    onClick={() => toggleLostSize(group.productId, b.barcode, size)}
-                                                                                    className={`px-4 py-1.5 rounded text-xs font-bold transition-all border ${
-                                                                                        isMarked 
-                                                                                            ? "bg-red-600 border-red-600 text-white shadow-sm scale-105" 
-                                                                                            : "bg-white border-red-200 text-red-600 hover:border-red-400"
-                                                                                    }`}
-                                                                                >
-                                                                                    {size.name}
-                                                                                </button>
-                                                                            );
-                                                                        })}
+                                                                        {(() => {
+                                                                            const displaySizes = [...(group.sizes || [])];
+                                                                            // Add historical sizes that might be missing from current product definition
+                                                                            b.lostOrDefect?.forEach((lost: any) => {
+                                                                                if (!displaySizes.some(s => String(s._id) === String(lost.size))) {
+                                                                                    displaySizes.push({ _id: lost.size, name: lost.name });
+                                                                                }
+                                                                            });
+
+                                                                            return displaySizes.map((size: any) => {
+                                                                                const isMarked = b.lostOrDefect?.some((l: any) => String(l.size) === String(size._id));
+                                                                                return (
+                                                                                    <button
+                                                                                        key={size._id}
+                                                                                        onClick={() => toggleLostSize(group.productId, b.barcode, size)}
+                                                                                        className={`px-4 py-1.5 rounded text-xs font-bold transition-all border ${
+                                                                                            isMarked 
+                                                                                                ? "bg-red-600 border-red-600 text-white shadow-sm scale-105" 
+                                                                                                : "bg-white border-red-200 text-red-600 hover:border-red-400"
+                                                                                        }`}
+                                                                                    >
+                                                                                        {size.name}
+                                                                                    </button>
+                                                                                );
+                                                                            });
+                                                                        })()}
                                                                     </div>
                                                                 </div>
                                                             )}
