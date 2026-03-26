@@ -21,7 +21,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { Button } from "./ui/button";
-import { useAppDispatch } from "@/redux/hooks";
+import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { logout } from "@/redux/slices/authSlice";
 
 const navigation = [
@@ -52,6 +52,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const dispatch = useAppDispatch();
+  const { user } = useAppSelector((state) => state.auth);
 
   // Auto-expand settings if child is active
   useEffect(() => {
@@ -203,10 +204,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </Button>
           <div className="flex items-center space-x-4 ml-auto">
             <div className="hidden sm:flex items-center space-x-3 px-3 py-1.5 bg-gray-50 rounded-full border border-gray-100">
-              <div className="w-7 h-7 bg-indigo-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                AD
+              <div className="w-7 h-7 bg-indigo-600 rounded-full flex items-center justify-center text-white text-[10px] font-bold uppercase transition-transform hover:scale-110">
+                {user?.fullName?.split(" ").map((n: string) => n[0]).slice(0, 2).join("") || "AD"}
               </div>
-              <span className="text-sm font-medium text-gray-700">Admin Panel</span>
+              <span className="text-sm font-semibold text-gray-700 tracking-tight">{user?.fullName || "Admin Panel"}</span>
             </div>
           </div>
         </header>
