@@ -164,7 +164,7 @@ export function Products() {
         <head>
           <title>Labels - ${selectedProduct?.productCode}</title>
           <style>
-            @page { size: 50mm 25mm; margin: 0; }
+            @page { size: 50mm 25mm portrait; margin: 0; }
             body { margin: 0; padding: 0; font-family: sans-serif; }
             .sticker { 
                 width: 50mm; height: 25mm; text-align: center; 
