@@ -438,7 +438,10 @@ export function Products() {
                         <div className="col-span-full py-20 text-center text-gray-400">Loading stock...</div>
                     ) : currentInventory.length > 0 ? (
                         currentInventory.map((item: any) => (
-                            <div key={item._id} className="bg-white border rounded-lg p-3 flex flex-col items-center shadow-sm">
+                            <div key={item._id} className="bg-white border rounded-lg p-3 flex flex-col items-center shadow-sm relative group">
+                                {item.status === "Partial" && (
+                                    <Badge className="absolute -top-2 -right-2 bg-amber-500 text-[8px] h-4 px-1 border-none shadow-sm z-10">Partial</Badge>
+                                )}
                                 <p className="text-xs font-bold text-gray-800 uppercase mb-2 tracking-wide">{selectedProduct?.productCode}</p>
                                 <Barcode value={item.barcode} displayText={item.sequenceNumber.toString()} />
                             </div>
