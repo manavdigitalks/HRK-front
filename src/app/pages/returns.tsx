@@ -125,14 +125,13 @@ export function Returns() {
     win.document.write(`
       <html><head><title>Labels - ${pCode}</title>
       <style>
-        @page { size: 25mm 50mm; margin: 0; }
+        @page { size: 50mm 25mm; margin: 0; }
         body { margin: 0; padding: 0; font-family: sans-serif; }
         .sticker { 
-            width: 25mm; height: 50mm; text-align: center; 
+            width: 50mm; height: 25mm; text-align: center; 
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             page-break-after: always; overflow: hidden;
-            padding: 1mm; box-sizing: border-box;
-            transform: rotate(90deg); transform-origin: center;
+            padding: 2mm; box-sizing: border-box;
         }
         .sku-name { font-weight: 900; font-size: 10pt; margin-bottom: 1mm; text-transform: uppercase; line-height: 1; }
         .barcode-img { width: 42mm; height: 10mm; object-fit: contain; }
@@ -148,24 +147,25 @@ export function Returns() {
     try {
       const images = await generateBarcodeImages(items);
       const pdf = new jsPDF({
-          orientation: "portrait",
+          orientation: "landscape",
           unit: "mm",
-          format: [25, 50]
+          format: [50, 25]
       });
 
       images.forEach((img: any, idx: number) => {
-          if (idx > 0) pdf.addPage([25, 50], "portrait");
+          if (idx > 0) pdf.addPage([50, 25], "landscape");
           
           pdf.setFontSize(10);
           pdf.setFont("helvetica", "bold");
-          pdf.text(pCode, 6, 25, { angle: 90, align: "center" });
+          const tw = pdf.getTextWidth(pCode);
+          pdf.text(pCode, (50 - tw) / 2, 6);
 
-          pdf.addImage(img.dataUrl, "PNG", 18, 5, 10, 40, undefined, "FAST", 90);
+          pdf.addImage(img.dataUrl, "PNG", 5, 8, 40, 10);
 
           pdf.setFontSize(8);
           pdf.setFont("courier", "bold");
           const idText = img.sequenceNumber.toString();
-          pdf.text(idText, 22, 25, { angle: 90, align: "center" });
+          pdf.text(idText, (50 - pdf.getTextWidth(idText)) / 2, 22);
       });
       pdf.save(`Returns-${pCode}-${fileNamePart}.pdf`);
       toast.success("PDF Downloaded", { id: toastId });

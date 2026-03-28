@@ -141,14 +141,13 @@ export function StockEntry() {
     win.document.write(`
       <html><head><title>Labels - ${productCode}</title>
       <style>
-        @page { size: 25mm 50mm; margin: 0; }
+        @page { size: 50mm 25mm portrait; margin: 0; }
         body { margin: 0; padding: 0; font-family: sans-serif; }
         .sticker { 
-            width: 25mm; height: 50mm; text-align: center; 
+            width: 50mm; height: 25mm; text-align: center; 
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             page-break-after: always; overflow: hidden;
-            padding: 1mm; box-sizing: border-box;
-            transform: rotate(90deg); transform-origin: center;
+            padding: 2mm; box-sizing: border-box;
         }
         .sku-name { font-weight: 900; font-size: 10pt; margin-bottom: 1mm; text-transform: uppercase; line-height: 1; }
         .barcode-img { width: 42mm; height: 10mm; object-fit: contain; }
@@ -166,19 +165,20 @@ export function StockEntry() {
       const images = await generateBarcodeImages(viewData.items);
       const productCode = viewData.entry.product?.productCode || "";
       const pdf = new jsPDF({
-          orientation: "portrait",
+          orientation: "landscape",
           unit: "mm",
-          format: [25, 50]
+          format: [50, 25]
       });
 
       images.forEach((img: any, idx: number) => {
-          if (idx > 0) pdf.addPage([25, 50], "portrait");
+          if (idx > 0) pdf.addPage([50, 25], "landscape");
           
           pdf.setFontSize(10);
           pdf.setFont("helvetica", "bold");
-          pdf.text(productCode, 6, 25, { angle: 90, align: "center" });
+          const tw = pdf.getTextWidth(productCode);
+          pdf.text(productCode, (50 - tw) / 2, 6);
 
-          pdf.addImage(img.dataUrl, "PNG", 18, 5, 10, 40, undefined, "FAST", 90);
+          pdf.addImage(img.dataUrl, "PNG", 5, 8, 40, 10);
 
           pdf.setFontSize(8);
           pdf.setFont("courier", "bold");

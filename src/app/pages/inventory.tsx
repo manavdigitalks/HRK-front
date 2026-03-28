@@ -107,29 +107,30 @@ export function Inventory() {
         const toastId = toast.loading("Generating PDF...");
         try {
             const pdf = new jsPDF({
-                orientation: "portrait",
+                orientation: "landscape",
                 unit: "mm",
-                format: [25, 50]
+                format: [50, 25]
             });
             const dataUrl = canvas.toDataURL("image/png");
 
-            // SKU Text rotated
+            // SKU Text
             pdf.setFontSize(10);
             pdf.setFont("helvetica", "bold");
-            const pCode = selectedItem?.product?.productCode || "";
-            pdf.text(pCode, 6, 25, { angle: 90, align: "center" });
+            const productCode = selectedItem?.product?.productCode || "";
+            const tw = pdf.getTextWidth(productCode);
+            pdf.text(productCode, (50 - tw) / 2, 6);
 
-            // Barcode image rotated 90deg
-            pdf.addImage(dataUrl, "PNG", 18, 5, 10, 40, undefined, "FAST", 90);
+            // Barcode
+            pdf.addImage(dataUrl, "PNG", 5, 8, 40, 10);
 
-            // Seq Number rotated
+            // Seq Number
             pdf.setFontSize(8);
             pdf.setFont("courier", "bold");
             const idText = selectedItem.sequenceNumber.toString();
-            pdf.text(idText, 22, 25, { angle: 90, align: "center" });
+            pdf.text(idText, (50 - pdf.getTextWidth(idText)) / 2, 22);
 
             pdf.save(`barcode-${selectedItem.sequenceNumber}.pdf`);
-           toast.success("PDF Downloaded", { id: toastId });
+            toast.success("PDF Downloaded", { id: toastId });
         } catch (err) {
             toast.error("Generation failed.", { id: toastId });
         }
@@ -148,18 +149,12 @@ export function Inventory() {
                 <head>
                     <title>Label - ${selectedItem.barcode}</title>
                     <style>
-                        @page { size: 25mm 50mm; margin: 0; }
-                        body { margin: 0; padding: 0; font-family: sans-serif; }
-                        .sticker { 
-                            width: 25mm; height: 50mm; text-align: center; 
-                            display: flex; flex-direction: column; align-items: center; justify-content: center;
-                            page-break-after: always; overflow: hidden;
-                            padding: 1mm; box-sizing: border-box;
-                            transform: rotate(90deg); transform-origin: center;
-                        }
-                        .sku-name { font-weight: 900; font-size: 10pt; margin-bottom: 1mm; text-transform: uppercase; line-height: 1; }
-                        .barcode-img { width: 42mm; height: 10mm; object-fit: contain; }
-                        .barcode-id { font-size: 8pt; font-family: monospace; margin-top: 1mm; font-weight: bold; line-height: 1; }
+                        @page { size: A4; margin: 10mm; }
+                        body { margin: 0; padding: 0; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
+                        .sticker { width: 100%; max-width: 600px; text-align: center; page-break-inside: avoid; padding: 10px 0; border-bottom: 0.5px solid #eee; display: flex; flex-direction: column; align-items: center; height: 35mm; justify-content: center; }
+                        .sku-name { font-weight: 900; font-size: 16px; margin-bottom: 6px; text-transform: uppercase; }
+                        .barcode-img { width: 450px; height: 14mm; object-fit: contain; }
+                        .barcode-id { font-size: 14px; font-family: monospace; margin-top: 6px; font-weight: bold; }
                     </style>
                 </head>
                 <body onload="window.print(); window.close();">
