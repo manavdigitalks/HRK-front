@@ -125,13 +125,14 @@ export function Returns() {
     win.document.write(`
       <html><head><title>Labels - ${pCode}</title>
       <style>
-        @page { size: 50mm 25mm; margin: 0; }
+        @page { size: 25mm 50mm; margin: 0; }
         body { margin: 0; padding: 0; font-family: sans-serif; }
         .sticker { 
-            width: 50mm; height: 25mm; text-align: center; 
+            width: 25mm; height: 50mm; text-align: center; 
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             page-break-after: always; overflow: hidden;
-            padding: 2mm; box-sizing: border-box;
+            padding: 1mm; box-sizing: border-box;
+            transform: rotate(90deg); transform-origin: center;
         }
         .sku-name { font-weight: 900; font-size: 10pt; margin-bottom: 1mm; text-transform: uppercase; line-height: 1; }
         .barcode-img { width: 42mm; height: 10mm; object-fit: contain; }
@@ -147,25 +148,24 @@ export function Returns() {
     try {
       const images = await generateBarcodeImages(items);
       const pdf = new jsPDF({
-          orientation: "landscape",
+          orientation: "portrait",
           unit: "mm",
-          format: [50, 25]
+          format: [25, 50]
       });
 
       images.forEach((img: any, idx: number) => {
-          if (idx > 0) pdf.addPage([50, 25], "landscape");
+          if (idx > 0) pdf.addPage([25, 50], "portrait");
           
           pdf.setFontSize(10);
           pdf.setFont("helvetica", "bold");
-          const tw = pdf.getTextWidth(pCode);
-          pdf.text(pCode, (50 - tw) / 2, 6);
+          pdf.text(pCode, 6, 25, { angle: 90, align: "center" });
 
-          pdf.addImage(img.dataUrl, "PNG", 5, 8, 40, 10);
+          pdf.addImage(img.dataUrl, "PNG", 18, 5, 10, 40, undefined, "FAST", 90);
 
           pdf.setFontSize(8);
           pdf.setFont("courier", "bold");
           const idText = img.sequenceNumber.toString();
-          pdf.text(idText, (50 - pdf.getTextWidth(idText)) / 2, 22);
+          pdf.text(idText, 22, 25, { angle: 90, align: "center" });
       });
       pdf.save(`Returns-${pCode}-${fileNamePart}.pdf`);
       toast.success("PDF Downloaded", { id: toastId });

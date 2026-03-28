@@ -164,13 +164,14 @@ export function Products() {
         <head>
           <title>Labels - ${selectedProduct?.productCode}</title>
           <style>
-            @page { size: 50mm 25mm portrait; margin: 0; }
+            @page { size: 25mm 50mm; margin: 0; }
             body { margin: 0; padding: 0; font-family: sans-serif; }
             .sticker { 
-                width: 50mm; height: 25mm; text-align: center; 
+                width: 25mm; height: 50mm; text-align: center; 
                 display: flex; flex-direction: column; align-items: center; justify-content: center;
                 page-break-after: always; overflow: hidden;
-                padding: 2mm; box-sizing: border-box;
+                padding: 1mm; box-sizing: border-box;
+                transform: rotate(90deg); transform-origin: center;
             }
             .sku-name { font-weight: 900; font-size: 10pt; margin-bottom: 1mm; text-transform: uppercase; line-height: 1; }
             .barcode-img { width: 42mm; height: 10mm; object-fit: contain; }
@@ -199,30 +200,28 @@ export function Products() {
     try {
         const images = await generateBarcodeImages();
         const pdf = new jsPDF({
-            orientation: "landscape",
+            orientation: "portrait",
             unit: "mm",
-            format: [50, 25]
+            format: [25, 50]
         });
 
         images.forEach((img: any, idx: number) => {
-            if (idx > 0) pdf.addPage([50, 25], "landscape");
+            if (idx > 0) pdf.addPage([25, 50], "portrait");
             
-            // Center the product code
+            // Barcode image rotated 90deg
+            // addImage(imageData, format, x, y, width, height, alias, compression, rotation)
+            pdf.addImage(img.dataUrl, "PNG", 18, 5, 10, 40, undefined, "FAST", 90);
+
             pdf.setFontSize(10);
             pdf.setFont("helvetica", "bold");
-            const productCode = selectedProduct?.productCode || "";
-            const tw = pdf.getTextWidth(productCode);
-            pdf.text(productCode, (50 - tw) / 2, 6);
+            const pCode = selectedProduct?.productCode || "";
+            // x, y, options (with rotation)
+            pdf.text(pCode, 6, 25, { angle: 90, align: "center" });
 
-            // Barcode image
-            pdf.addImage(img.dataUrl, "PNG", 5, 8, 40, 10);
-
-            // Sequence number
             pdf.setFontSize(8);
             pdf.setFont("courier", "bold");
             const idText = img.sequenceNumber.toString();
-            const idTw = pdf.getTextWidth(idText);
-            pdf.text(idText, (50 - idTw) / 2, 22);
+            pdf.text(idText, 22, 25, { angle: 90, align: "center" });
         });
 
         pdf.save(`${selectedProduct?.productCode}-barcodes.pdf`);
