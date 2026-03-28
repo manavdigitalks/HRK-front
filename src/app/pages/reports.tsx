@@ -149,32 +149,60 @@ export function Reports() {
                   </td>
                 </tr>
               ) : (
-                rows.map((row, i) => (
-                  <tr key={i} className={i % 2 === 0 ? "bg-white" : "bg-gray-50"}>
-                    <td className="px-4 py-2.5 font-bold text-indigo-600">{row.designNo}</td>
-                    <td className="px-4 py-2.5">{row.sku}</td>
-                    <td className="px-4 py-2.5 text-gray-600">{row.category}</td>
-                    {sizes.map((s) => {
-                      const val = row.sizeCounts[s._id];
-                      return (
-                        <td key={s._id} className="px-4 py-2.5 text-center">
-                          {val === null ? (
-                            <span className="text-gray-300">—</span>
-                          ) : (
-                            <span className={`font-bold ${val === 0 ? "text-red-500" : "text-gray-800"}`}>
-                              {val}
-                            </span>
-                          )}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))
+                <>
+                    {rows.map((row, i) => (
+                    <tr key={i} className={i % 2 === 0 ? "bg-white" : "bg-gray-50 border-y border-gray-100/50"}>
+                        <td className="px-4 py-2.5 font-bold text-indigo-600">{row.designNo}</td>
+                        <td className="px-4 py-2.5">{row.sku}</td>
+                        <td className="px-4 py-2.5 text-gray-600">{row.category}</td>
+                        {sizes.map((s) => {
+                        const val = row.sizeCounts[s._id];
+                        return (
+                            <td key={s._id} className="px-4 py-2.5 text-center">
+                            {val === null ? (
+                                <span className="text-gray-300">—</span>
+                            ) : (
+                                <span className={`font-bold ${val === 0 ? "text-red-500" : "text-gray-800"}`}>
+                                {val}
+                                </span>
+                            )}
+                            </td>
+                        );
+                        })}
+                    </tr>
+                    ))}
+                    {/* TOTAL ROW */}
+                    <tr className="bg-indigo-50/50 border-t-2 border-indigo-100 font-black text-indigo-900">
+                        <td colSpan={3} className="px-4 py-3 text-right uppercase tracking-wider text-xs">Grand Total Qty</td>
+                        {sizes.map((s) => {
+                            const totalForSize = rows.reduce((sum, row) => sum + (row.sizeCounts[s._id] || 0), 0);
+                            return (
+                                <td key={s._id} className="px-4 py-3 text-center text-base">
+                                    {totalForSize}
+                                </td>
+                            );
+                        })}
+                    </tr>
+                </>
               )}
             </tbody>
           </table>
         </div>
       </div>
+      
+      {!loading && rows.length > 0 && (
+          <div className="flex justify-end">
+              <div className="bg-indigo-600 text-white px-8 py-4 rounded-2xl shadow-lg shadow-indigo-200 flex flex-col items-end">
+                  <span className="text-[10px] uppercase font-bold tracking-[0.2em] opacity-80">Overall Total Pieces</span>
+                  <span className="text-4xl font-black">
+                      {rows.reduce((grandSum, row) => {
+                          const rowSum = Object.values(row.sizeCounts).reduce((s: number, v: any) => s + (v || 0), 0);
+                          return grandSum + rowSum;
+                      }, 0).toLocaleString()}
+                  </span>
+              </div>
+          </div>
+      )}
     </div>
   );
 }
