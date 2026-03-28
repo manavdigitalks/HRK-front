@@ -37,7 +37,7 @@ export const getProductsByFilter = createAsyncThunk(
 
 export const createReturn = createAsyncThunk('return/create', async (data: any) => {
   const response = await api.post('/return/create', data);
-  return response.data.data;
+  return response.data;
 });
 
 export const deleteReturn = createAsyncThunk('return/delete', async (id: string) => {
@@ -70,7 +70,7 @@ const returnSlice = createSlice({
       })
       .addCase(getProductsByFilter.rejected, (state) => { state.filterLoading = false; })
       .addCase(createReturn.fulfilled, (state, action) => {
-        state.returns.unshift(action.payload);
+        state.returns.unshift(...action.payload.data);
       })
       .addCase(deleteReturn.fulfilled, (state, action) => {
         state.returns = state.returns.filter((r) => r._id !== action.payload);

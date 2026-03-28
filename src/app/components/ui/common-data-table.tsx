@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Table,
   TableBody,
@@ -27,7 +27,7 @@ interface CommonDataTableProps {
     limit: number;
   };
   onPageChange: (page: number) => void;
-  onSearchChange: (search: string) => void;
+  onSearchChange?: (search: string) => void;
   onEdit?: (item: any) => void;
   onDelete?: (id: string) => void;
   loading?: boolean;
@@ -44,28 +44,36 @@ export function CommonDataTable({
   loading,
 }: CommonDataTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const onSearchChangeRef = useRef(onSearchChange);
 
   useEffect(() => {
+    onSearchChangeRef.current = onSearchChange;
+  }, [onSearchChange]);
+
+  useEffect(() => {
+    if (!onSearchChangeRef.current) return;
     const timer = setTimeout(() => {
-      onSearchChange(searchTerm);
+      onSearchChangeRef.current?.(searchTerm);
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [searchTerm, onSearchChange]);
+  }, [searchTerm]);
 
   return (
     <div className="space-y-4 p-1">
-      <div className="flex items-center justify-between gap-4">
-        <div className="relative max-w-sm flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input
-            placeholder="Quick search records..."
-            className="pl-10 h-10 border-gray-200 focus-visible:ring-indigo-500 rounded-lg shadow-sm"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+      {onSearchChange && (
+        <div className="flex items-center justify-between gap-4">
+          <div className="relative max-w-sm flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Quick search records..."
+              className="pl-10 h-10 border-gray-200 focus-visible:ring-indigo-500 rounded-lg shadow-sm"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="rounded-xl border border-gray-100 bg-white shadow-sm overflow-hidden">
         <div className="overflow-x-auto">

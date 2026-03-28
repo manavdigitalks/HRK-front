@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { fetchProductDropdown } from "@/redux/slices/productSlice";
 import { createStockEntry, fetchAllStockEntries, deleteStockEntry, fetchStockEntryInventory } from "@/redux/slices/stockEntrySlice";
@@ -8,7 +8,7 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../components/ui/dialog";
-import { Plus, Trash2, Eye, Download, Printer } from "lucide-react";
+import { Plus, Trash2, Eye, Download, Printer, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import { CommonDataTable } from "../components/ui/common-data-table";
 import { Badge } from "../components/ui/badge";
@@ -22,9 +22,11 @@ const emptyForm = () => ({
   invoiceNumber: "",
   product: "",
   totalSets: 0,
+  partialSets: [] as { sizes: string[] }[]
 });
 
 import { Combobox } from "../components/ui/combobox";
+import { X } from "lucide-react";
 
 export function StockEntry() {
   const dispatch = useAppDispatch();
@@ -41,20 +43,38 @@ export function StockEntry() {
 
   const [isOpen, setIsOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
+  const [isSuccessOpen, setIsSuccessOpen] = useState(false);
+  const [generatedBarcodes, setGeneratedBarcodes] = useState<any[]>([]);
   const [viewData, setViewData] = useState<{ entry: any; items: any[] } | null>(null);
   const [viewLoading, setViewLoading] = useState(false);
-  const [formData, setFormData] = useState(emptyForm());
+  const [formData, setFormData] = useState<any>(emptyForm());
   const [selectedProductDetails, setSelectedProductDetails] = useState<any>(null);
 
+  const [search, setSearch] = useState("");
+
   useEffect(() => {
-    dispatch(fetchAllStockEntries({ page: 1, limit: 10 }));
+    dispatch(fetchAllStockEntries({ page: 1, limit: 10, search }));
     dispatch(fetchProductDropdown(""));
     dispatch(fetchSupplierDropdown(""));
   }, [dispatch]);
 
-  const handlePageChange = (page: number) => {
-    dispatch(fetchAllStockEntries({ page, limit: 10 }));
-  };
+  const handlePageChange = useCallback((page: number) => {
+    dispatch(fetchAllStockEntries({ page, limit: 10, search }));
+  }, [dispatch, search]);
+
+  const handleSearch = useCallback((val: string) => {
+    if (val === search) return;
+    setSearch(val);
+    dispatch(fetchAllStockEntries({ page: 1, limit: 10, search: val }));
+  }, [dispatch, search]);
+
+  const handleSupplierSearch = useCallback((val: string) => {
+      dispatch(fetchSupplierDropdown(val));
+  }, [dispatch]);
+
+  const handleProductSearch = useCallback((val: string) => {
+      dispatch(fetchProductDropdown(val));
+  }, [dispatch]);
 
   const handleOpen = () => {
     setFormData(emptyForm());
@@ -65,8 +85,30 @@ export function StockEntry() {
   const handleProductChange = (productId: string) => {
     const product = products.find(p => p._id === productId);
     setSelectedProductDetails(product);
-    setFormData({ ...formData, product: productId });
+    setFormData({ ...formData, product: productId, partialSets: [] });
   };
+
+  const addPartialSetRow = () => {
+    setFormData({ ...formData, partialSets: [...formData.partialSets, { sizes: [] }] });
+  };
+
+  const removePartialSetRow = (index: number) => {
+    setFormData({ ...formData, partialSets: formData.partialSets.filter((_: any, i: number) => i !== index) });
+  };
+
+  const toggleSizeInPartialSet = (index: number, sizeId: string) => {
+    const newPartialSets = [...formData.partialSets];
+    const currentSizes = newPartialSets[index].sizes;
+    if (currentSizes.includes(sizeId)) {
+        newPartialSets[index].sizes = currentSizes.filter((id: string) => id !== sizeId);
+    } else {
+        newPartialSets[index].sizes = [...currentSizes, sizeId];
+    }
+    setFormData({ ...formData, partialSets: newPartialSets });
+  };
+
+  const totalItemsCalculated = (formData.totalSets * (selectedProductDetails?.sizes?.length || 0)) + 
+    formData.partialSets.reduce((acc: number, set: any) => acc + (set.sizes?.length || 0), 0);
 
   const handleView = async (entryId: string) => {
     setViewLoading(true);
@@ -139,16 +181,18 @@ export function StockEntry() {
   };
 
   const handleSave = async () => {
-    if (!formData.product || !formData.totalSets || !formData.supplier || !formData.invoiceNumber) {
+    if (!formData.product || (!formData.totalSets && formData.partialSets.length === 0) || !formData.supplier || !formData.invoiceNumber) {
       toast.error("Please fill all required fields");
       return;
     }
     try {
-      await dispatch(createStockEntry(formData)).unwrap();
-      toast.success("Stock entry created and barcodes generated!");
+      const result = await dispatch(createStockEntry(formData)).unwrap();
+      toast.success("Stock entry created successfully!", { duration: 4000 });
+      setGeneratedBarcodes(result.barcodes || []);
       setFormData(emptyForm());
       setSelectedProductDetails(null);
       setIsOpen(false);
+      setIsSuccessOpen(true);
       dispatch(fetchAllStockEntries({ page: 1, limit: 10 }));
     } catch (err: any) {
       toast.error(err.message || "Failed to create stock entry");
@@ -162,7 +206,7 @@ export function StockEntry() {
         toast.success("Stock entry and related barcodes removed");
         dispatch(fetchAllStockEntries({ page: pagination.currentPage, limit: 10 }));
       } catch (err: any) {
-        toast.error(err.message || "Failed to delete");
+        toast.error(typeof err === 'string' ? err : (err.message || "Failed to delete"));
       }
     }
   };
@@ -185,8 +229,8 @@ export function StockEntry() {
         </span>
       </div>
     )},
-    { header: "Sets", accessorKey: "totalSets", cell: (item: any) => (
-      <Badge variant="secondary">{item.totalSets} Sets</Badge>
+    { header: "Barcodes", accessorKey: "totalSets", cell: (item: any) => (
+      <Badge variant="secondary">{item.totalSets} Barcodes</Badge>
     )},
     { header: "Barcode Range", accessorKey: "range", cell: (item: any) => (
       <span className="text-[11px] font-mono text-gray-500">#{item.startSequence} - #{item.endSequence}</span>
@@ -215,19 +259,19 @@ export function StockEntry() {
         </Button>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden p-6">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden p-6 text-center">
         <CommonDataTable
           columns={columns}
           data={entries}
           pagination={pagination}
           onPageChange={handlePageChange}
-          onSearchChange={() => {}}
+          onSearchChange={handleSearch}
           loading={loading}
         />
       </div>
 
       <Dialog open={isOpen} onOpenChange={(o) => { if (!o) { setFormData(emptyForm()); setSelectedProductDetails(null); } setIsOpen(o); }}>
-        <DialogContent className="sm:max-w-[550px]">
+        <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Stock In</DialogTitle>
           </DialogHeader>
@@ -250,7 +294,7 @@ export function StockEntry() {
                 options={supplierOptions}
                 value={formData.supplier}
                 onChange={(val) => setFormData({...formData, supplier: val})}
-                onSearchChange={(val) => dispatch(fetchSupplierDropdown(val))}
+                onSearchChange={handleSupplierSearch}
                 placeholder="Select Supplier"
               />
             </div>
@@ -261,7 +305,7 @@ export function StockEntry() {
                 options={productOptions}
                 value={formData.product}
                 onChange={handleProductChange}
-                onSearchChange={(val) => dispatch(fetchProductDropdown(val))}
+                onSearchChange={handleProductSearch}
                 placeholder="Search Product..."
               />
             </div>
@@ -278,19 +322,54 @@ export function StockEntry() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Number of Sets</Label>
+                <Label>Number of Full Sets</Label>
                 <Input type="number" value={formData.totalSets} onChange={(e) => setFormData({...formData, totalSets: +e.target.value})} />
               </div>
               <div className="bg-gray-100 rounded-md p-3 flex flex-col justify-center">
                 <span className="text-[10px] font-bold text-gray-400 uppercase">Total Items</span>
-                <span className="text-xl font-bold">{formData.totalSets * (selectedProductDetails?.sizes?.length || 0)} Pcs</span>
+                <span className="text-xl font-bold">{totalItemsCalculated} Pcs</span>
               </div>
             </div>
+
+            {selectedProductDetails && (
+                <div className="space-y-4 pt-4 border-t">
+                    <div className="flex items-center justify-between">
+                        <Label className="text-md font-bold">Special Barcodes (with missing sizes)</Label>
+                        <Button type="button" variant="outline" size="sm" onClick={addPartialSetRow} className="text-indigo-600 border-indigo-100">
+                            <Plus className="w-3 h-3 mr-1" /> Add Special Barcode
+                        </Button>
+                    </div>
+
+                    {formData.partialSets.map((set: any, idx: number) => (
+                        <div key={idx} className="p-4 bg-gray-50 rounded-lg border border-gray-100 relative group">
+                            <button onClick={() => removePartialSetRow(idx)} className="absolute -top-2 -right-2 bg-white border rounded-full p-1 text-red-500 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity">
+                                <X className="w-3 h-3" />
+                            </button>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Barcode #{idx + 1} - Select Sizes Available:</p>
+                            <div className="flex flex-wrap gap-2">
+                                {selectedProductDetails.sizes?.map((size: any) => (
+                                    <button
+                                        key={size._id}
+                                        onClick={() => toggleSizeInPartialSet(idx, size._id)}
+                                        className={`px-3 py-1 rounded text-[11px] font-bold transition-all border ${
+                                            set.sizes.includes(size._id)
+                                                ? "bg-indigo-600 border-indigo-600 text-white"
+                                                : "bg-white border-gray-200 text-gray-400 hover:border-indigo-200"
+                                        }`}
+                                    >
+                                        {size.name}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsOpen(false)}>Cancel</Button>
-            <Button onClick={handleSave} className="bg-indigo-600 text-white">Save</Button>
+            <Button onClick={handleSave} className="bg-indigo-600 text-white font-bold">Save Stock Entry</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -331,6 +410,54 @@ export function StockEntry() {
               <div className="py-20 text-center text-gray-400">No items found</div>
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isSuccessOpen} onOpenChange={setIsSuccessOpen}>
+        <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-green-600">
+                <CheckCircle className="w-5 h-5" />
+                Inventory Added: {generatedBarcodes.length} Barcodes Created
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="py-6 space-y-6">
+            <div className="bg-green-50 p-4 rounded-lg border border-green-100 flex items-center justify-between">
+                <div>
+                   <p className="font-bold text-green-800">New Stock Processed Successfully!</p>
+                   <p className="text-xs text-green-600 font-bold uppercase tracking-tight">Highlighting Partial Sets (with missing sizes)</p>
+                </div>
+                <div className="flex gap-2">
+                    <Button onClick={() => setIsSuccessOpen(false)} className="bg-gray-900 text-white font-bold px-8">Confirm</Button>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              {generatedBarcodes.map((item, idx) => (
+                <div key={idx} className={`bg-white border rounded-lg p-3 flex flex-col items-center shadow-sm relative group ${item.isPartial ? 'border-amber-300 ring-1 ring-amber-100' : ''}`}>
+                    {item.isPartial && (
+                        <Badge className="absolute -top-2 px-2 h-4 border-none bg-amber-500 text-white text-[8px] font-bold">
+                            PARTIAL
+                        </Badge>
+                    )}
+                    <p className="text-[9px] font-bold text-gray-400 uppercase mb-2 tracking-tighter truncate w-full text-center">
+                        {selectedProductDetails?.productCode}
+                    </p>
+                    <Barcode value={item.barcode} displayText={item.sequenceNumber?.toString()} />
+                    {item.isPartial && (
+                        <div className="mt-2 w-full text-[8px] text-amber-600 font-bold bg-amber-50 p-1 rounded text-center leading-tight">
+                            {item.sizeNames?.join(", ")}
+                        </div>
+                    )}
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button onClick={() => setIsSuccessOpen(false)} className="bg-gray-900 text-white font-bold px-8">Close</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

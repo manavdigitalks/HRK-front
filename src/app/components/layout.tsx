@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Package,
+  Barcode,
   Ruler,
   Users,
   PackagePlus,
@@ -27,7 +28,8 @@ import { logout } from "@/redux/slices/authSlice";
 const navigation = [
   { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
   { name: "Products", path: "/products", icon: Package },
-  { name: "Stock Entry", path: "/stock-entry", icon: PackagePlus },
+  { name: "Stock In", path: "/stock-entry", icon: PackagePlus },
+  { name: "Barcode Panel", path: "/inventory", icon: Barcode },
   { name: "Customers", path: "/customers", icon: UserCircle },
   { name: "Packing Slip", path: "/billing", icon: ShoppingCart },
   { name: "Order Form", path: "/order-form", icon: PackagePlus },

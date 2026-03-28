@@ -12,746 +12,371 @@ import { Save, Scan, Receipt, ChevronDown, ChevronUp, Trash2, ArrowLeft, UserPlu
 import { useRouter } from "next/navigation";
 import { Switch } from "./ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "./ui/dialog";
-
 import { Combobox } from "./ui/combobox";
 
 export function BillingForm({ id }: { id?: string }) {
-  const router = useRouter();
-  const dispatch = useAppDispatch();
-  const { dropdownItems: customers } = useAppSelector((state) => state.customer);
-  
-  // Format customers for Combobox
-  const customerOptions = customers.map((c: any) => ({
-    label: `${c.name} ${c.number ? `(${c.number})` : ""}`,
-    value: c._id
-  }));
+    const router = useRouter();
+    const dispatch = useAppDispatch();
+    const { dropdownItems: customers } = useAppSelector((state) => state.customer);
 
-  const [items, setItems] = useState<any[]>([]); // Grouped entries
-  const [selectedCustomer, setSelectedCustomer] = useState("");
-  const [barcodeInput, setBarcodeInput] = useState("");
-  const [discount, setDiscount] = useState(0);
-  const [gstEnabled, setGstEnabled] = useState(false);
-  const [gstPercent, setGstPercent] = useState(18);
-  const [loading, setLoading] = useState(false);
-  const [addCustomerOpen, setAddCustomerOpen] = useState(false);
-  const [newCustomer, setNewCustomer] = useState({ name: "", number: "" });
-  const [savingCustomer, setSavingCustomer] = useState(false);
-  const [reservedItems, setReservedItems] = useState<any[]>([]);
-  const [selectedReservations, setSelectedReservations] = useState<string[]>([]);
+    const customerOptions = [
+        { label: "Walk-in Customer", value: "walk-in" },
+        ...customers.map((c: any) => ({
+            label: `${c.name} ${c.number ? `(${c.number})` : ""}`,
+            value: c._id
+        }))
+    ];
 
-  useEffect(() => {
-    dispatch(fetchCustomerDropdown(""));
-    if (id) {
-        setLoading(true);
-        dispatch(fetchBillingById(id)).unwrap().then((bill: any) => {
-            const grouped: any[] = [];
-            let tempSubtotal = 0;
-            bill.items.forEach((item: any) => {
-                const prodId = item.product?._id || item.product;
-                const existing = grouped.find(g => g.productId === prodId);
-                tempSubtotal += (item.qty * item.price);
-                if (existing) {
-                    existing.barcodes.push({ 
-                        barcode: item.barcode, 
-                        sequenceNumber: item.sequenceNumber, 
-                        qty: item.qty, 
-                        originalQty: item.originalQty || Math.max(item.qty + (item.lostOrDefect?.length || 0), (item.product?.sizes?.length || 0)),
-                        lostOrDefect: item.lostOrDefect || []
-                    });
-                } else {
-                    grouped.push({
-                        productId: prodId,
-                        productName: item.productName,
-                        price: item.price,
-                        isExpanded: false,
-                        sizes: item.product?.sizes || [],
-                        barcodes: [{ 
-                            barcode: item.barcode, 
-                            sequenceNumber: item.sequenceNumber, 
-                            qty: item.qty, 
-                            originalQty: item.originalQty || Math.max(item.qty + (item.lostOrDefect?.length || 0), (item.product?.sizes?.length || 0)),
-                            lostOrDefect: item.lostOrDefect || []
-                        }]
-                    });
-                }
-            });
-            setItems(grouped);
-            setSelectedCustomer(bill.customer?._id || bill.customer);
-            
-            if (bill.gstEnabled !== undefined) {
-                setGstEnabled(bill.gstEnabled);
+    const [items, setItems] = useState<any[]>([]);
+    const [selectedCustomer, setSelectedCustomer] = useState("");
+    const [barcodeInput, setBarcodeInput] = useState("");
+    const [discount, setDiscount] = useState(0);
+    const [gstEnabled, setGstEnabled] = useState(false);
+    const [gstPercent, setGstPercent] = useState(18);
+    const [loading, setLoading] = useState(false);
+    const [addCustomerOpen, setAddCustomerOpen] = useState(false);
+    const [newCustomer, setNewCustomer] = useState({ name: "", number: "" });
+    const [savingCustomer, setSavingCustomer] = useState(false);
+    const [reservedItems, setReservedItems] = useState<any[]>([]);
+    const [selectedReservations, setSelectedReservations] = useState<string[]>([]);
+
+    useEffect(() => {
+        dispatch(fetchCustomerDropdown(""));
+        if (id) {
+            setLoading(true);
+            dispatch(fetchBillingById(id)).unwrap().then((bill: any) => {
+                const grouped: any[] = [];
+                bill.items.forEach((item: any) => {
+                    const prodId = item.product?._id || item.product;
+                    const existing = grouped.find(g => g.productId === prodId);
+                    const barcodeObj = {
+                        barcode: item.barcode,
+                        sequenceNumber: item.sequenceNumber,
+                        qty: item.qty,
+                        availableSizes: item.product?.availableSizes || [],
+                        soldSizes: item.soldSizes?.map((s: any) => s._id || s) || [],
+                        originalQty: item.originalQty || item.qty
+                    };
+                    if (existing) {
+                        existing.barcodes.push(barcodeObj);
+                    } else {
+                        grouped.push({
+                            productId: prodId,
+                            productName: item.productName,
+                            price: item.price,
+                            isExpanded: false,
+                            sizes: item.product?.sizes || [],
+                            barcodes: [barcodeObj]
+                        });
+                    }
+                });
+                setItems(grouped);
+                setSelectedCustomer(bill.customer?._id || bill.customer);
+                setGstEnabled(bill.gstEnabled || false);
                 setGstPercent(bill.gstPercent || 0);
                 setDiscount(bill.discountPercent || 0);
-            } else if (bill.totalAmount && tempSubtotal > 0) {
-                const disc = 100 * (1 - ((bill.totalAmount / 1.18) / tempSubtotal));
-                setDiscount(Math.round(disc > 0 ? disc : 0));
-                setGstEnabled(true);
-                setGstPercent(18);
+                setLoading(false);
+            }).catch(() => {
+                toast.error("Failed to load billing");
+                router.push("/billing");
+            });
+        }
+    }, [dispatch, id, router]);
+
+    useEffect(() => {
+        if (selectedCustomer && selectedCustomer !== "walk-in") {
+            dispatch(fetchReservedItems(selectedCustomer)).unwrap().then((items) => {
+                setReservedItems(items);
+                setSelectedReservations(items.map((i: any) => i._id));
+            });
+        } else {
+            setReservedItems([]);
+            setSelectedReservations([]);
+        }
+    }, [selectedCustomer, dispatch]);
+
+    const handleAddCustomer = async () => {
+        if (!newCustomer.name || !newCustomer.number) return;
+        setSavingCustomer(true);
+        try {
+            const created = await dispatch(createCustomer(newCustomer)).unwrap();
+            setSelectedCustomer(created._id);
+            setAddCustomerOpen(false);
+            toast.success("Customer added!");
+        } catch { toast.error("Failed"); } finally { setSavingCustomer(false); }
+    };
+
+    const handleScan = async () => {
+        if (!barcodeInput) return;
+        try {
+            const result = await dispatch(scanBarcode({
+                barcode: barcodeInput,
+                customerId: selectedCustomer,
+                selectedReservations: selectedReservations
+            })).unwrap();
+
+            const existingGroup = items.find(i => i.productId === result.productId);
+            if ((existingGroup?.barcodes.length || 0) >= result.availableQuota) {
+                toast.error(`Availability Limit for ${result.productName}.`);
+                setBarcodeInput(""); return;
             }
-            setLoading(false);
-        }).catch((err: any) => {
-            console.error("Load Error:", err);
-            toast.error("Failed to load billing");
-            router.push("/billing");
-        });
-    }
-  }, [dispatch, id, router]);
 
-  useEffect(() => {
-    if (selectedCustomer) {
-      dispatch(fetchReservedItems(selectedCustomer)).unwrap().then((items) => {
-          setReservedItems(items);
-          setSelectedReservations(items.map((i: any) => i._id)); // Default select all
-      });
-    } else {
-      setReservedItems([]);
-      setSelectedReservations([]);
-    }
-  }, [selectedCustomer, dispatch]);
+            if (items.flatMap(g => g.barcodes.map((b: any) => b.barcode)).includes(result.barcode)) {
+                toast.warning("Already added");
+                setBarcodeInput(""); return;
+            }
 
-  const handleAddCustomer = async () => {
-    if (!newCustomer.name || !newCustomer.number) {
-      toast.error("Name and number required");
-      return;
-    }
-    setSavingCustomer(true);
-    try {
-      const created = await dispatch(createCustomer(newCustomer)).unwrap();
-      setSelectedCustomer(created._id);
-      setNewCustomer({ name: "", number: "" });
-      setAddCustomerOpen(false);
-      toast.success("Customer added!");
-    } catch (err: any) {
-      toast.error(err.message || "Failed to add customer");
-    } finally {
-      setSavingCustomer(false);
-    }
-  };
+            const newBarcodeObj = {
+                barcode: result.barcode,
+                sequenceNumber: result.sequenceNumber,
+                qty: result.availableSizes?.length || 1,
+                availableSizes: result.availableSizes || [],
+                soldSizes: result.availableSizes?.map((s: any) => s._id) || [],
+                originalQty: result.availableSizes?.length || 1
+            };
 
-  const handleScan = async () => {
-    if (!barcodeInput) return;
-    try {
-      // Check if this product is part of a selected reservation
-      // We first need to know which product this barcode belongs to. 
-      // Unfortunately, we only know after scanBarcode returns it.
-      // So I'll modify scanBarcode in Redux to handle a preliminary check or just call it twice.
-      // Alternatively, I can call scanBarcode without isReserved first to get the productId, OR
-      // I can just pass the selected status of the UI to the backend if searching by productCode matches.
-      
-      // Let's assume the user knows what they are scanning. 
-      // If we don't know the productId yet, we can't be sure if it's reserved.
-      // However, we can fetch all inventory items information or just try both.
-      
-      // Optimized approach: Call once, get productId, then if it matches a selected reservation, 
-      // call again OR just handle it in the backend by passing the WHOLE selectedReservations list.
-      
-      const result = await dispatch(scanBarcode({ 
-          barcode: barcodeInput, 
-          customerId: selectedCustomer,
-          selectedReservations: selectedReservations // Passing array to backend
-      })).unwrap();
+            if (existingGroup) {
+                setItems(items.map(group => group.productId === result.productId ? { ...group, isExpanded: true, barcodes: [...group.barcodes, newBarcodeObj] } : group));
+            } else {
+                setItems([...items, {
+                    productId: result.productId, productName: result.productName, price: result.price,
+                    isExpanded: true, sizes: result.sizes || [], barcodes: [newBarcodeObj]
+                }]);
+            }
+            setBarcodeInput("");
+            toast.success(`Added ${result.productName}`);
+        } catch (err: any) {
+            toast.error(typeof err === 'string' ? err : (err.message || "Error"));
+            setBarcodeInput("");
+        }
+    };
 
-      // The updated scanBarcode backend logic will check isReserved internally 
-      // if we pass isReserved based on whether the product matches a selected reservation.
-      // Wait, I updated the backend to expect 'isReserved' boolean. 
-      // I'll need to update it again or call scanBarcode once to get product info.
-      
-      // Let's do a quick 'check' call or just pass the selected list.
-      // Actually, I'll update the scanBarcode API to accept 'selectedReservations' array directly.
-      
-      const existingGroup = items.find(i => i.productId === result.productId);
-      const currentCount = existingGroup?.barcodes.length || 0;
+    const toggleExpand = (productId: string) => setItems(items.map(item => item.productId === productId ? { ...item, isExpanded: !item.isExpanded } : item));
+    const removeGroup = (productId: string) => setItems(items.filter((item) => item.productId !== productId));
+    const removeBarcode = (productId: string, barcode: string) => setItems(items.map(group => {
+        if (group.productId === productId) return { ...group, barcodes: group.barcodes.filter((b: any) => b.barcode !== barcode) };
+        return group;
+    }).filter(group => group.barcodes.length > 0));
 
-      // Quota check based on server data
-      if (currentCount >= result.availableQuota) {
-        toast.error(`Availability Limit: Only ${result.availableQuota} sets of ${result.productName} are available. Remaining stock is reserved.`);
-        setBarcodeInput("");
-        return;
-      }
-
-      const allBarcodes = items.flatMap(g => g.barcodes.map((b: any) => b.barcode));
-      if (allBarcodes.includes(result.barcode)) {
-        toast.warning("Already added");
-        setBarcodeInput("");
-        return;
-      }
-
-      const newBarcodeObj = { 
-        barcode: result.barcode, 
-        sequenceNumber: result.sequenceNumber,
-        qty: result.qty, 
-        originalQty: result.qty,
-        lostOrDefect: []
-      };
-
-      if (existingGroup) {
-        setItems(items.map(group => {
-            if (group.productId === result.productId) {
+    const toggleSoldSize = (productId: string, barcode: string, sizeId: string) => {
+        setItems(prevItems => prevItems.map(group => {
+            if (group.productId === productId) {
                 return {
                     ...group,
-                    isExpanded: true,
-                    barcodes: [...group.barcodes, newBarcodeObj]
+                    barcodes: group.barcodes.map((b: any) => {
+                        if (b.barcode !== barcode) return b;
+                        const currentSold = b.soldSizes || [];
+                        const newSold = currentSold.includes(sizeId) ? currentSold.filter((id: string) => id !== sizeId) : [...currentSold, sizeId];
+                        return { ...b, soldSizes: newSold, qty: newSold.length };
+                    })
                 };
             }
             return group;
         }));
-      } else {
-        setItems([...items, { 
-            productId: result.productId,
-            productName: result.productName,
-            price: result.price,
-            isExpanded: true,
-            sizes: result.sizes || [],
-            barcodes: [newBarcodeObj]
-        }]);
-      }
-      
-      setBarcodeInput("");
-      toast.success(`Added ${result.productName}`);
-    } catch (err: any) {
-      toast.error(err.message || "Error");
-      setBarcodeInput("");
-    }
-  };
+    };
 
-  const toggleExpand = (productId: string) => {
-    setItems(items.map(item => item.productId === productId ? { ...item, isExpanded: !item.isExpanded } : item));
-  }
+    const subtotal = items.reduce((sum, g) => sum + g.barcodes.reduce((gs: number, b: any) => gs + (b.qty * g.price), 0), 0);
+    const discountAmount = (subtotal * discount) / 100;
+    const afterDiscount = subtotal - discountAmount;
+    const gstAmount = gstEnabled ? (afterDiscount * gstPercent / 100) : 0;
+    const total = afterDiscount + gstAmount;
 
-  const removeGroup = (productId: string) => {
-    setItems(items.filter((item) => item.productId !== productId));
-  };
+    const handleSave = async () => {
+        if (!selectedCustomer) { toast.error("Choose customer"); return; }
+        if (items.length === 0) { toast.error("Add items"); return; }
 
-  const removeBarcode = (productId: string, barcode: string) => {
-    setItems(items.map(group => {
-        if (group.productId === productId) {
-            const newBarcodes = group.barcodes.filter((b: any) => b.barcode !== barcode);
-            return { ...group, barcodes: newBarcodes };
+        const flattened = items.flatMap(g => g.barcodes.map((b: any) => ({
+            product: g.productId, productName: g.productName, barcode: b.barcode, sequenceNumber: b.sequenceNumber,
+            qty: b.qty, soldSizes: b.soldSizes, originalQty: b.originalQty, price: g.price, total: b.qty * g.price
+        })));
+
+        for (const item of flattened) {
+            if (!item.soldSizes?.length) { toast.error(`Select sizes for ID: ${item.sequenceNumber}`); return; }
         }
-        return group;
-    }).filter(group => group.barcodes.length > 0));
-  };
 
-  const updateBarcodeQty = (productId: string, barcode: string, newQty: number) => {
-    setItems(prevItems => prevItems.map(group => {
-        if (group.productId === productId) {
-            return {
-                ...group,
-                barcodes: group.barcodes.map((b: any) => {
-                    if (b.barcode !== barcode) return b;
-                    const clamped = Math.min(Math.max(1, newQty), b.originalQty);
-                    
-                    // Reset lostOrDefect if qty increases
-                    const diff = b.originalQty - clamped;
-                    let newLostOrDefect = b.lostOrDefect || [];
-                    const currentLostTotal = newLostOrDefect.reduce((s: number, l: any) => s + l.qty, 0);
-                    
-                    if (currentLostTotal > diff) {
-                        // If we have more lost items selected than the diff, we need to trim
-                        newLostOrDefect = []; // Simplest approach: reset selection if it doesn't match
-                    }
-
-                    return { ...b, qty: clamped, lostOrDefect: newLostOrDefect };
-                })
+        try {
+            const billingData = {
+                customer: selectedCustomer === "walk-in" ? null : selectedCustomer,
+                items: flattened, subtotal, discountPercent: discount,
+                gstEnabled, gstPercent, totalAmount: total, fulfilledReservationIds: selectedReservations
             };
+            if (id) await dispatch(updateBilling({ id, data: billingData })).unwrap();
+            else await dispatch(createBilling(billingData)).unwrap();
+            router.push("/billing");
+        } catch (err: any) {
+            toast.error(typeof err === 'string' ? err : (err.message || "Failed"));
         }
-        return group;
-    }));
-  };
+    };
 
-  const toggleLostSize = (productId: string, barcode: string, size: any) => {
-    setItems(prevItems => prevItems.map(group => {
-      if (group.productId === productId) {
-        return {
-          ...group,
-          barcodes: group.barcodes.map((b: any) => {
-            if (b.barcode !== barcode) return b;
-            
-            const diff = b.originalQty - b.qty;
-            if (diff <= 0) return b;
+    if (loading) return <div className="p-20 text-center font-bold text-gray-400 animate-pulse uppercase">Loading...</div>;
 
-            const existing = b.lostOrDefect?.find((l: any) => String(l.size) === String(size._id));
-            const currentTotal = b.lostOrDefect?.reduce((s: number, l: any) => s + (l.qty || 0), 0) || 0;
-
-            let newLostOrDefect = [...(b.lostOrDefect || [])];
-            
-            if (existing) {
-              // If already exists, we might want to toggle it off or increment if possible
-              // but for now let's just rotate: add 1, if max reached, remove.
-              // Actually, simpler: if exists, remove. If not exists, add 1.
-              newLostOrDefect = newLostOrDefect.filter(l => String(l.size) !== String(size._id));
-            } else {
-              if (currentTotal < diff) {
-                newLostOrDefect.push({ size: size._id, name: size.name, qty: 1 });
-              } else {
-                toast.warning(`You've already accounted for all ${diff} missing pieces.`);
-                return b;
-              }
-            }
-
-            return { ...b, lostOrDefect: newLostOrDefect };
-          })
-        };
-      }
-      return group;
-    }));
-  };
-
-  const subtotal = items.reduce((sum, group) => {
-    const groupTotal = group.barcodes.reduce((gSum: number, b: any) => gSum + (b.qty * group.price), 0);
-    return sum + groupTotal;
-  }, 0);
-
-  const discountAmount = (subtotal * discount) / 100;
-  const afterDiscount = subtotal - discountAmount;
-  const gstAmount = gstEnabled ? (afterDiscount * gstPercent / 100) : 0;
-  const total = afterDiscount + gstAmount;
-
-  const handleSave = async () => {
-    if (!selectedCustomer) {
-      toast.error("Choose a customer!");
-      return;
-    }
-    // --- RESERVATION FULFILLMENT VALIDATION (Only for SELECTED) ---
-    for (const booking of reservedItems) {
-        if (!selectedReservations.includes(booking._id)) continue;
-
-        const prodId = booking.product?._id || booking.product;
-        // Optimization: In a real scenario, we might want to track which scan filled which reservation.
-        // For now, we verify that the total scanned for this product meets the sum of selected reservations.
-        const currentInBill = items.find(g => g.productId === prodId)?.barcodes.length || 0;
-        
-        if (currentInBill < booking.totalSets) {
-            toast.error(`You have selected order for ${booking.product?.productCode} (${booking.totalSets} sets), but added only ${currentInBill} sets. Please scan all pieces for the selected order.`);
-            return;
-        }
-    }
-    // ------------------------------------------
-
-    if (items.length === 0) {
-      toast.error("Add items first");
-      return;
-    }
-
-    try {
-      const flattenedItems = items.flatMap(group => (
-        group.barcodes.map((b: any) => ({
-          product: group.productId,
-          productName: group.productName,
-          barcode: b.barcode,
-          sequenceNumber: b.sequenceNumber,
-          qty: b.qty,
-          originalQty: b.originalQty,
-          lostOrDefect: b.lostOrDefect,
-          price: group.price,
-          total: b.qty * group.price
-        }))
-      ));
-
-      // Validate missing pieces are marked
-      for (const item of flattenedItems) {
-        const diff = (item.originalQty || 0) - item.qty;
-        if (diff > 0) {
-            const markedQty = item.lostOrDefect?.reduce((s: number, l: any) => s + (l.qty || 0), 0) || 0;
-            if (markedQty < diff) {
-                toast.error(`Please select sizes for the ${diff} missing pieces in ${item.productName} (ID: ${item.sequenceNumber})`);
-                return;
-            }
-        }
-      }
-
-      const billingData = {
-        customer: selectedCustomer,
-        items: flattenedItems,
-        subtotal: subtotal,
-        discountPercent: discount,
-        gstEnabled: gstEnabled,
-        gstPercent: gstPercent, 
-        totalAmount: total,
-        fulfilledReservationIds: selectedReservations
-      };
-
-      if (id) {
-        await dispatch(updateBilling({ id, data: billingData })).unwrap();
-        toast.success("Updated!");
-      } else {
-        await dispatch(createBilling(billingData)).unwrap();
-        toast.success("Saved!");
-      }
-      
-      router.push("/billing");
-    } catch (err: any) {
-      toast.error(err.message || "Failed");
-    }
-  };
-
-
-  if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-gray-400 font-bold uppercase tracking-widest animate-pulse">Loading Packing Slip...</div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="p-4 lg:p-6 space-y-6 bg-gray-50 min-h-screen">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-white p-5 rounded-lg border shadow-sm gap-4">
-        <div className="flex items-center gap-4">
-            <Button variant="outline" size="icon" onClick={() => router.push("/billing")} title="Go Back">
-                <ArrowLeft className="w-5 h-5 text-gray-500" />
-            </Button>
-            <div>
-                <h1 className="text-2xl font-bold text-gray-900">{id ? "Edit Packing Slip" : "Add Packing Slip"}</h1>
-                <p className="text-gray-500 text-sm">Save your scan records here</p>
-            </div>
-        </div>
-        <div>
-            <Button onClick={handleSave} className="bg-indigo-600 hover:bg-indigo-700 font-bold px-10 h-11">
-                <Save className="w-4 h-4 mr-2" /> {id ? "Update" : "Save"}
-            </Button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <div className="lg:col-span-3 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white p-6 rounded-lg border shadow-sm">
-              <div className="space-y-2">
-                <Label className="text-sm font-bold text-gray-700">Select Customer</Label>
-                <div className="flex gap-2">
-                  <Combobox
-                    options={customerOptions}
-                    value={selectedCustomer}
-                    onChange={setSelectedCustomer}
-                    onSearchChange={(val) => dispatch(fetchCustomerDropdown(val))}
-                    placeholder="Search Customer..."
-                    className="flex-1"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    className="h-11 w-11 shrink-0 border-indigo-200 text-indigo-600 hover:bg-indigo-50"
-                    onClick={() => setAddCustomerOpen(true)}
-                    title="Add new customer"
-                  >
-                    <UserPlus className="w-4 h-4" />
-                  </Button>
+        <div className="p-4 lg:p-6 space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-white p-5 rounded-lg border shadow-sm gap-4">
+                <div className="flex items-center gap-4">
+                    <Button variant="outline" size="icon" onClick={() => router.push("/billing")}><ArrowLeft className="w-5 h-5 text-gray-500" /></Button>
+                    <div>
+                        <h1 className="text-2xl font-bold text-gray-900">{id ? "Edit Packing Slip" : "Add Packing Slip"}</h1>
+                        <p className="text-gray-500 text-sm">Scan and manage dispatch</p>
+                    </div>
                 </div>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-sm font-bold text-gray-700">Scan Barcode / Seq ID</Label>
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Enter Seq No..."
-                    value={barcodeInput}
-                    onChange={(e) => setBarcodeInput(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleScan()}
-                    className="h-11 border text-sm"
-                  />
-                  <Button onClick={handleScan} className="bg-gray-800 h-11">
-                    <Scan className="w-4 h-4 mr-2" /> Scan
-                  </Button>
-                </div>
-              </div>
+                <Button onClick={handleSave} className="bg-indigo-600 font-bold px-10 h-11 text-white hover:bg-indigo-700"><Save className="w-4 h-4 mr-2" /> {id ? "Update" : "Save"}</Button>
             </div>
 
-            {reservedItems.length > 0 && (
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-5 space-y-3 shadow-sm">
-                    <div className="flex items-center gap-3 border-b border-amber-200 pb-2">
-                        <PackageSearch className="w-5 h-5 text-amber-600" />
-                        <h3 className="text-sm font-bold text-amber-900">Order Form</h3>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-                        {reservedItems.map((booking, idx) => {
-                            const isSelected = selectedReservations.includes(booking._id);
-                            return (
-                                <div 
-                                    key={idx} 
-                                    onClick={() => {
-                                        if (isSelected) setSelectedReservations(prev => prev.filter(id => id !== booking._id));
-                                        else setSelectedReservations(prev => [...prev, booking._id]);
-                                    }}
-                                    className={`p-3 rounded-md border flex flex-col justify-center cursor-pointer transition-all ${
-                                        isSelected 
-                                            ? "bg-amber-100 border-amber-400 ring-2 ring-amber-400 ring-opacity-30" 
-                                            : "bg-white border-amber-100 opacity-60 hover:opacity-100"
-                                    }`}
-                                >
-                                    <div className="flex justify-between items-start mb-1">
-                                        <p className={`text-sm font-bold ${isSelected ? "text-amber-900" : "text-gray-500"}`}>
-                                            {booking.product?.productCode}
-                                        </p>
-                                        <Badge variant="outline" className={`font-bold text-[10px] px-1.5 py-0 ${
-                                            isSelected ? "bg-amber-200 text-amber-800 border-amber-400" : "bg-gray-100 text-gray-400"
-                                        }`}>
-                                            {booking.totalSets} Sets
-                                        </Badge>
-                                    </div>
-                                    <p className="text-[10px] text-gray-400 uppercase truncate">
-                                        {booking.product?.sizes?.map((s:any)=>s.name).join(", ")}
-                                    </p>
-                                    {isSelected && (
-                                        <div className="flex items-center gap-1 mt-1">
-                                            <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></div>
-                                            <span className="text-[9px] font-bold text-amber-600 uppercase">Selected to Fill</span>
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
-                    {/* <p className="text-[10px] text-amber-600 font-medium">* Scan any barcodes for these products manually. System will enforce the reservation limit.</p> */}
-                </div>
-            )}
-
-            <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
-                <div className="p-4 border-b bg-gray-50/50">
-                    <h2 className="font-bold text-gray-800">Scanned Products</h2>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="bg-gray-50 border-b">
-                      <tr>
-                        <th className="px-5 py-3 text-left font-bold text-gray-600 w-12 text-center">#</th>
-                        <th className="px-5 py-3 text-left font-bold text-gray-600">Product Name</th>
-                        <th className="px-5 py-3 text-center font-bold text-gray-600">Rate</th>
-                        <th className="px-5 py-3 text-center font-bold text-gray-600 w-24">Set Count</th>
-                        <th className="px-5 py-3 text-center font-bold text-gray-600">Total Price</th>
-                        <th className="px-5 py-3 text-right w-12"></th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y">
-                      {items.length === 0 ? (
-                        <tr>
-                          <td colSpan={6} className="px-5 py-24 text-center">
-                            <div className="flex flex-col items-center text-gray-300">
-                                <Receipt className="w-12 h-12 mb-2 opacity-50" />
-                                <p className="font-medium">Please scan a product.</p>
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                <div className="lg:col-span-3 space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-6 rounded-lg border shadow-sm">
+                        <div className="space-y-2">
+                            <Label className="text-sm font-bold">Select Customer</Label>
+                            <div className="flex gap-2">
+                                <Combobox options={customerOptions} value={selectedCustomer} onChange={setSelectedCustomer} onSearchChange={(v) => dispatch(fetchCustomerDropdown(v))} className="flex-1" />
+                                <Button variant="outline" size="icon" className="h-11 w-11" onClick={() => setAddCustomerOpen(true)}><UserPlus className="w-4 h-4" /></Button>
                             </div>
-                          </td>
-                        </tr>
-                      ) : (
-                        items.map((group, index) => {
-                            const totalGroupPrice = group.barcodes.reduce((s: number, b: any) => s + (b.qty * group.price), 0);
-                            return (
-                                <React.Fragment key={group.productId}>
-                                    <tr className={`hover:bg-gray-50 ${group.isExpanded ? 'bg-indigo-50/30' : ''}`}>
-                                      <td className="px-5 py-4 text-center text-gray-400 font-medium">
-                                          {index + 1}
-                                      </td>
-                                      <td className="px-5 py-4">
-                                        <div className="flex items-center gap-3">
-                                            <button onClick={() => toggleExpand(group.productId)} className="p-1 hover:bg-white rounded border border-gray-200 bg-white">
-                                                {group.isExpanded ? <ChevronUp className="w-4 h-4 text-indigo-600" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
-                                            </button>
-                                            <div className="font-bold text-gray-800">{group.productName}</div>
-                                        </div>
-                                      </td>
-                                      <td className="px-5 py-4 text-center text-gray-600 font-medium">₹{group.price}</td>
-                                      <td className="px-5 py-4 text-center">
-                                          <Badge variant="outline" className="font-bold px-2 py-0.5 border-indigo-200 text-indigo-700 bg-white">
-                                              {group.barcodes.length} Sets
-                                          </Badge>
-                                      </td>
-                                      <td className="px-5 py-4 text-center font-bold text-indigo-700">₹{totalGroupPrice.toLocaleString()}</td>
-                                      <td className="px-5 py-4 text-right">
-                                        <Button variant="ghost" size="icon" onClick={() => removeGroup(group.productId)} className="text-red-400 hover:text-red-600 h-8 w-8">
-                                          <Trash2 className="w-4 h-4" />
-                                        </Button>
-                                      </td>
-                                    </tr>
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-sm font-bold">Scan Barcode / ID</Label>
+                            <div className="flex gap-2">
+                                <Input value={barcodeInput} onChange={(e) => setBarcodeInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleScan()} />
+                                <Button onClick={handleScan} className="bg-gray-800 text-white"><Scan className="w-4 h-4 mr-2" /> Scan</Button>
+                            </div>
+                        </div>
+                    </div>
 
-                                    {group.isExpanded && (
-                                        <tr className="bg-gray-50/50">
-                                            <td colSpan={6} className="px-10 py-5">
-                                                <div className="space-y-3 border-l-2 border-indigo-200 pl-6 mb-2">
-                                                    <div className="grid grid-cols-4 gap-4 px-3 text-[11px] font-bold uppercase text-gray-400">
-                                                        <div>Sequence ID</div>
-                                                        <div className="text-center">QTY (Pieces)</div>
-                                                        <div className="text-center">Rate</div>
-                                                        <div className="text-right">Total Price</div>
-                                                    </div>
-                                                    {group.barcodes.map((b: any) => (
-                                                        <React.Fragment key={b.barcode}>
-                                                            <div className="grid grid-cols-4 gap-4 items-center bg-white p-3 rounded-md border border-gray-100 shadow-sm">
-                                                                <div className="text-sm font-bold text-indigo-600">ID: {b.sequenceNumber}</div>
-                                                                <div className="flex justify-center flex-col items-center">
-                                                                    <div className="flex items-center gap-2">
-                                                                        <Input 
-                                                                            type="number" 
-                                                                            value={b.qty} 
-                                                                            min={1}
-                                                                            max={b.originalQty}
-                                                                            onChange={(e) => updateBarcodeQty(group.productId, b.barcode, +e.target.value)}
-                                                                            className="w-16 h-8 text-center font-bold text-sm"
-                                                                        />
-                                                                        <span className="text-[10px] text-gray-400 font-bold">/ {b.originalQty}</span>
-                                                                    </div>
-                                                                </div>
-                                                                <div className="text-center text-sm font-semibold text-gray-500">₹{group.price}</div>
-                                                                <div className="flex items-center justify-between">
-                                                                    <div className="font-bold text-gray-900 text-sm">₹{(b.qty * group.price).toLocaleString()}</div>
-                                                                    <button onClick={() => removeBarcode(group.productId, b.barcode)} className="text-red-300 hover:text-red-500 p-2">
-                                                                        <Trash2 className="w-4 h-4" />
-                                                                    </button>
+                    {reservedItems.length > 0 && (
+                        <div className="bg-amber-50/50 border border-amber-100 rounded-xl p-5 space-y-4">
+                            <div className="flex items-center justify-between">
+                                <p className="text-[10px] font-bold text-amber-800 uppercase tracking-widest flex items-center gap-2">
+                                    <PackageSearch className="w-4 h-4 text-amber-500" />
+                                    Active Order Booking Reservations
+                                </p>
+                                <Badge className="bg-amber-200 text-amber-900 border-amber-300 hover:bg-amber-200">{reservedItems.length} Reserved</Badge>
+                            </div>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                                {reservedItems.map((b, idx) => {
+                                    const selected = selectedReservations.includes(b._id);
+                                    return (
+                                        <div
+                                            key={idx}
+                                            onClick={() => setSelectedReservations(prev => selected ? prev.filter(i => i !== b._id) : [...prev, b._id])}
+                                            className={`relative p-3 rounded-xl border transition-all duration-200 cursor-pointer overflow-hidden ${selected
+                                                    ? "bg-amber-100 border-amber-400 shadow-sm ring-1 ring-amber-400"
+                                                    : "bg-white border-gray-200 opacity-60 hover:opacity-100 hover:border-amber-200"
+                                                }`}
+                                        >
+                                            {selected && (
+                                                <div className="absolute top-1 right-1 bg-amber-600 rounded-full p-0.5">
+                                                    <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" />
+                                                    </svg>
+                                                </div>
+                                            )}
+                                            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter mb-1">order form</div>
+                                            <div className="flex justify-between items-center gap-2">
+                                                <span className={`font-bold truncate ${selected ? "text-amber-900" : "text-gray-900"}`}>{b.product?.productCode}</span>
+                                                <Badge className={`${selected ? "bg-amber-600" : "bg-gray-200"} text-white text-[10px] h-5 px-1.5`}>{b.totalSets}S</Badge>
+                                            </div>
+                                            <div className="mt-1.5 flex flex-wrap gap-1">
+                                                {b.product?.sizes?.map((s: any, sIdx: number) => (
+                                                    <span
+                                                        key={sIdx}
+                                                        className={`px-1 rounded-[4px] text-[8px] font-bold border ${selected
+                                                                ? "bg-amber-200 border-amber-300 text-amber-900"
+                                                                : "bg-gray-100 border-gray-200 text-gray-400"
+                                                            }`}
+                                                    >
+                                                        {s.name}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
+                        <table className="w-full text-sm">
+                            <thead className="bg-gray-50 border-b font-bold text-gray-600">
+                                <tr><th className="p-3 w-10">#</th><th className="p-3 text-left">Product</th><th className="p-3 text-center">Rate</th><th className="p-3 text-center">Sets</th><th className="p-3 text-center">Total</th><th className="p-3 text-right"></th></tr>
+                            </thead>
+                            <tbody className="divide-y">
+                                {items.length === 0 ? <tr><td colSpan={6} className="p-20 text-center text-gray-300 font-bold"><Receipt className="w-10 h-10 mx-auto mb-2 opacity-30" /> No products scanned</td></tr> : items.map((g, i) => (
+                                    <React.Fragment key={g.productId}>
+                                        <tr>
+                                            <td className="p-3 text-center font-medium text-gray-400">{i + 1}</td>
+                                            <td className="p-3 font-bold flex items-center gap-2">
+                                                <button onClick={() => toggleExpand(g.productId)}>{g.isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</button>
+                                                {g.productName}
+                                            </td>
+                                            <td className="p-3 text-center">₹{g.price}</td>
+                                            <td className="p-3 text-center"><Badge variant="outline">{g.barcodes.length} Sets</Badge></td>
+                                            <td className="p-3 text-center font-bold text-indigo-700">₹{g.barcodes.reduce((s: number, b: any) => s + (b.qty * g.price), 0).toLocaleString()}</td>
+                                            <td className="p-3 text-right"><Button variant="ghost" size="icon" className="text-red-300" onClick={() => removeGroup(g.productId)}><Trash2 size={16} /></Button></td>
+                                        </tr>
+                                        {g.isExpanded && (
+                                            <tr className="bg-gray-50/50"><td colSpan={6} className="p-5">
+                                                <div className="space-y-3 border-l-2 border-indigo-100 pl-4">
+                                                    {g.barcodes.map((b: any) => (
+                                                        <div key={b.barcode} className="space-y-2">
+                                                            <div className="grid grid-cols-4 items-center bg-white p-3 rounded border border-gray-100 shadow-sm transition-all hover:border-indigo-200">
+                                                                <span className="font-bold text-indigo-600">ID: {b.sequenceNumber}</span>
+                                                                <div className="text-center"><Badge className="bg-indigo-50 text-indigo-600 border-indigo-100">{b.qty} PCS</Badge></div>
+                                                                <div className="text-center text-gray-400">₹{g.price}</div>
+                                                                <div className="flex items-center justify-between font-bold">₹{(b.qty * g.price).toLocaleString()}<Button variant="ghost" size="icon" className="h-6 w-6 text-red-200" onClick={() => removeBarcode(g.productId, b.barcode)}><Trash2 size={14} /></Button></div>
+                                                            </div>
+                                                            <div className="bg-indigo-50/20 p-3 rounded border border-indigo-50 ml-6">
+                                                                <span className="text-[10px] font-bold text-indigo-400 uppercase block mb-2">Select Sizes to Dispatch:</span>
+                                                                <div className="flex flex-wrap gap-2">
+                                                                    {(b.availableSizes?.length ? b.availableSizes : g.sizes).map((s: any) => {
+                                                                        const isSold = b.soldSizes?.includes(s._id);
+                                                                        return <button key={s._id} onClick={() => toggleSoldSize(g.productId, b.barcode, s._id)} className={`px-4 py-1.5 rounded text-[11px] font-bold border transition-all ${isSold ? "bg-indigo-600 border-indigo-600 text-white" : "bg-white border-gray-200 text-gray-400 hover:border-indigo-100"}`}>{s.name}</button>
+                                                                    })}
                                                                 </div>
                                                             </div>
-
-                                                            {b.originalQty > b.qty && (
-                                                                <div className="bg-red-50/50 p-4 rounded-md border border-red-100 mt-2 ml-4">
-                                                                    <div className="flex items-center justify-between mb-3">
-                                                                        <div className="flex flex-col">
-                                                                            <span className="text-[10px] font-bold text-red-600 uppercase tracking-widest">Select Sizes for {b.originalQty - b.qty} Missing/Defect Pieces</span>
-                                                                            <p className="text-[10px] text-gray-400 font-medium">Click on size buttons to mark them.</p>
-                                                                        </div>
-                                                                        <Badge variant="outline" className="bg-white text-red-600 border-red-200 font-bold">
-                                                                            {b.lostOrDefect?.reduce((s:number, l:any)=>s+l.qty, 0)} / {b.originalQty - b.qty} Marked
-                                                                        </Badge>
-                                                                    </div>
-                                                                    <div className="flex flex-wrap gap-2">
-                                                                        {(() => {
-                                                                            const displaySizes = [...(group.sizes || [])];
-                                                                            // Add historical sizes that might be missing from current product definition
-                                                                            b.lostOrDefect?.forEach((lost: any) => {
-                                                                                if (!displaySizes.some(s => String(s._id) === String(lost.size))) {
-                                                                                    displaySizes.push({ _id: lost.size, name: lost.name });
-                                                                                }
-                                                                            });
-
-                                                                            return displaySizes.map((size: any) => {
-                                                                                const isMarked = b.lostOrDefect?.some((l: any) => String(l.size) === String(size._id));
-                                                                                return (
-                                                                                    <button
-                                                                                        key={size._id}
-                                                                                        onClick={() => toggleLostSize(group.productId, b.barcode, size)}
-                                                                                        className={`px-4 py-1.5 rounded text-xs font-bold transition-all border ${
-                                                                                            isMarked 
-                                                                                                ? "bg-red-600 border-red-600 text-white shadow-sm scale-105" 
-                                                                                                : "bg-white border-red-200 text-red-600 hover:border-red-400"
-                                                                                        }`}
-                                                                                    >
-                                                                                        {size.name}
-                                                                                    </button>
-                                                                                );
-                                                                            });
-                                                                        })()}
-                                                                    </div>
-                                                                </div>
-                                                            )}
-                                                        </React.Fragment>
+                                                        </div>
                                                     ))}
                                                 </div>
-                                            </td>
-                                        </tr>
-                                    )}
-                                </React.Fragment>
-                            )
-                        })
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-            </div>
-        </div>
-
-        <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg p-6 border shadow-sm sticky top-6 space-y-6">
-                <div>
-                    <h3 className="text-lg font-bold text-gray-900 border-b pb-3 mb-4">Summary</h3>
-                    <div className="space-y-4">
-                        <div className="flex justify-between items-center text-sm font-medium text-gray-500">
-                            <span>Subtotal</span>
-                            <span className="text-gray-900 font-bold">₹{subtotal.toLocaleString()}</span>
-                        </div>
-                        <div className="space-y-1">
-                            <span className="text-sm font-medium text-gray-500">Discount (%)</span>
-                            <div className="flex items-center justify-between gap-2">
-                                <Input
-                                  type="number"
-                                  value={discount}
-                                  onChange={(e) => setDiscount(Math.max(0, +e.target.value))}
-                                  className="h-9 w-20 text-center font-bold"
-                                />
-                                <span className="text-red-500 font-bold text-sm">- ₹{discountAmount.toLocaleString()}</span>
-                            </div>
-                        </div>
-                        <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                                <span className="text-sm font-medium text-gray-500">GST</span>
-                                <Switch checked={gstEnabled} onCheckedChange={setGstEnabled} className="scale-75 origin-left" />
-                            </div>
-                            <div className="flex items-center justify-between gap-2">
-                                <Input
-                                  type="number"
-                                  value={gstPercent}
-                                  onChange={(e) => setGstPercent(Math.max(0, +e.target.value))}
-                                  disabled={!gstEnabled}
-                                  className={`h-9 w-20 text-center font-bold ${!gstEnabled ? 'opacity-50' : ''}`}
-                                />
-                                <span className={`text-gray-900 font-bold text-sm ${!gstEnabled ? 'opacity-40' : ''}`}>₹{gstAmount.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
-                            </div>
-                        </div>
-                        <div className="pt-4 border-t">
-                            <div className="flex justify-between items-baseline mb-1">
-                                <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Grand Total</span>
-                                <div className="text-3xl font-bold text-indigo-600 tracking-tight">
-                                    <span className="text-sm mr-0.5">₹</span>
-                                    {total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </div>
-                            </div>
-                        </div>
+                                            </td></tr>
+                                        )}
+                                    </React.Fragment>
+                                ))}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
-                <div className="bg-gray-50 p-4 rounded-md border text-center">
-                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Items Scanned</span>
-                    <span className="text-3xl font-bold text-gray-800">{items.reduce((s, g) => s + g.barcodes.length, 0)}</span>
-                </div>
-
-                <div className="space-y-3">
-                    <Button onClick={handleSave} className="w-full h-12 bg-indigo-600 hover:bg-indigo-700 font-bold text-white text-md rounded-md">
-                        {id ? "Update Now" : "Save Now"}
-                    </Button>
-                    <p className="text-[10px] text-gray-400 text-center uppercase leading-normal font-bold">
-                        Please check all entries before<br/>submitting the packing slip.
-                    </p>
+                <div className="lg:col-span-1 space-y-6">
+                    <div className="bg-white p-6 rounded-lg border shadow-sm sticky top-6 space-y-4">
+                        <h3 className="font-bold text-gray-900 border-b pb-2">Order Summary</h3>
+                        <div className="space-y-3 text-sm">
+                            <div className="flex justify-between"><span>Subtotal</span><span className="font-bold">₹{subtotal.toLocaleString()}</span></div>
+                            <div className="flex items-center justify-between gap-4">
+                                <span>Discount %</span>
+                                <Input type="number" className="h-8 w-16 text-center" value={discount} onChange={(e) => setDiscount(+e.target.value)} />
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2"><span>GST</span><Switch checked={gstEnabled} onCheckedChange={setGstEnabled} /></div>
+                                <Input type="number" className="h-8 w-16 text-center" value={gstPercent} onChange={(e) => setGstPercent(+e.target.value)} disabled={!gstEnabled} />
+                            </div>
+                        </div>
+                        <div className="pt-4 border-t flex justify-between items-baseline"><span className="text-xs font-bold text-gray-400 uppercase">Grand Total</span><span className="text-3xl font-bold text-indigo-600">₹{total.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span></div>
+                        <div className="bg-gray-50 p-4 rounded text-center"><span className="text-[10px] font-bold text-gray-400 uppercase block">Total Barcodes</span><span className="text-2xl font-bold">{items.reduce((s, g) => s + g.barcodes.length, 0)}</span></div>
+                        <Button onClick={handleSave} className="w-full h-12 bg-indigo-600 font-bold text-white rounded">Save Record</Button>
+                    </div>
                 </div>
             </div>
+
+            <Dialog open={addCustomerOpen} onOpenChange={setAddCustomerOpen}>
+                <DialogContent className="sm:max-w-[400px]">
+                    <DialogHeader><DialogTitle>Add Customer</DialogTitle></DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-1"><Label>Name</Label><Input value={newCustomer.name} onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })} /></div>
+                        <div className="space-y-1"><Label>Number</Label><Input value={newCustomer.number} onChange={(e) => setNewCustomer({ ...newCustomer, number: e.target.value })} /></div>
+                    </div>
+                    <DialogFooter><Button onClick={handleAddCustomer} className="bg-indigo-600 text-white" disabled={savingCustomer}>{savingCustomer ? "Wait..." : "Save Customer"}</Button></DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
-      </div>
-
-      <Dialog open={addCustomerOpen} onOpenChange={setAddCustomerOpen}>
-        <DialogContent className="sm:max-w-[380px]">
-          <DialogHeader>
-            <DialogTitle>Add New Customer</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label>Name</Label>
-              <Input
-                placeholder="Customer name"
-                value={newCustomer.name}
-                onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Phone Number</Label>
-              <Input
-                placeholder="10-digit number"
-                value={newCustomer.number}
-                onChange={(e) => setNewCustomer({ ...newCustomer, number: e.target.value })}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setAddCustomerOpen(false)}>Cancel</Button>
-            <Button onClick={handleAddCustomer} disabled={savingCustomer} className="bg-indigo-600 text-white">
-              {savingCustomer ? "Saving..." : "Add Customer"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
+    );
 }

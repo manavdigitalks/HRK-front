@@ -288,17 +288,14 @@ export function Products() {
     )},
     { header: "Stock Status", accessorKey: "inventory", cell: (item: any) => (
         <div className="flex flex-col gap-1">
-            <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-none text-[10px] w-fit">
-                Available: {item.totalInStock || 0}
+            <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-none text-[10px] w-fit font-bold">
+                Avail. Pcs: {item.totalInStock || 0}
             </Badge>
-            <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-none text-[10px] w-fit">
+            <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-none text-[10px] w-fit font-bold">
                 Reserved: {item.totalReserved || 0}
             </Badge>
-            {/* <Badge className="bg-red-100 text-red-700 hover:bg-red-100 border-none text-[10px] w-fit font-bold">
-                Defect/Lost: {item.totalLost || 0}
-            </Badge> */}
-            <div className="text-[11px] font-bold text-gray-400 mt-1 uppercase tracking-tight">
-                Total Sets: {item.totalCount || 0}
+            <div className="text-[11px] font-bold text-indigo-600 mt-1 uppercase tracking-tight">
+                Avail. Sets: {item.availableSets || 0}
             </div>
         </div>
     )},

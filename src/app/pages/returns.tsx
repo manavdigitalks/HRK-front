@@ -4,15 +4,17 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Badge } from "../components/ui/badge";
-import { Plus } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
+import { Plus, CheckCircle, X, Printer, Download, Trash2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../components/ui/dialog";
 import { toast } from "sonner";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { fetchAllReturns, createReturn, deleteReturn } from "@/redux/slices/returnSlice";
 import { CommonDataTable } from "../components/ui/common-data-table";
 import api from "@/lib/axios";
-
+import { Barcode as BarcodeComponent } from "../components/ui/barcode";
 import { Combobox } from "../components/ui/combobox";
+import bwipjs from "bwip-js";
+import jsPDF from "jspdf";
 
 export function Returns() {
   const dispatch = useAppDispatch();
@@ -20,6 +22,8 @@ export function Returns() {
 
   const [allProducts, setAllProducts] = useState<any[]>([]);
   const [isOpen, setIsOpen] = useState(false);
+  const [isSuccessOpen, setIsSuccessOpen] = useState(false);
+  const [generatedBarcodes, setGeneratedBarcodes] = useState<any[]>([]);
   const [search, setSearch] = useState("");
 
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
@@ -77,16 +81,19 @@ export function Returns() {
       return;
     }
     try {
-      await dispatch(
+      const result = await dispatch(
         createReturn({
           product: selectedProduct._id,
           sizes: selectedSizes.map(([size, qty]) => ({ size, qty })),
           returnDate,
         })
       ).unwrap();
+      
       toast.success("Return saved successfully!");
+      setGeneratedBarcodes(result.barcodes || []);
       setIsOpen(false);
-      dispatch(fetchAllReturns({ page: pagination?.currentPage || 1, limit: 10, search }));
+      setIsSuccessOpen(true);
+      dispatch(fetchAllReturns({ page: 1, limit: 10, search }));
     } catch (err: any) {
       toast.error(err.message || "Failed to save return");
     }
@@ -103,6 +110,58 @@ export function Returns() {
     }
   };
 
+  const generateBarcodeImages = async (items: any[]) => {
+    return Promise.all(items.map(item => new Promise((resolve) => {
+      const canvas = document.createElement("canvas");
+      bwipjs.toCanvas(canvas, { bcid: "code128", text: item.barcode, scale: 5, height: 10, includetext: false });
+      resolve({ barcode: item.barcode, sequenceNumber: item.sequenceNumber, dataUrl: canvas.toDataURL("image/png") });
+    }))) as Promise<any[]>;
+  };
+
+  const handlePrint = async (items: any[], pCode: string) => {
+    const win = window.open("", "_blank");
+    if (!win) return;
+    const images = await generateBarcodeImages(items);
+    win.document.write(`
+      <html><head><title>Labels - ${pCode}</title>
+      <style>
+        @page { size: A4; margin: 10mm; }
+        body { margin: 0; padding: 0; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
+        .sticker { width: 100%; max-width: 600px; text-align: center; page-break-inside: avoid; padding: 10px 0; border-bottom: 0.5px solid #eee; display: flex; flex-direction: column; align-items: center; height: 30mm; justify-content: center; }
+        .sku-name { font-weight: 900; font-size: 14px; margin-bottom: 4px; text-transform: uppercase; }
+        .barcode-img { width: 450px; height: 12mm; object-fit: contain; }
+        .barcode-id { font-size: 12px; font-family: monospace; margin-top: 4px; font-weight: bold; }
+      </style></head><body><div>
+      ${images.map((img: any) => `<div class="sticker"><div class="sku-name">${pCode}</div><img src="${img.dataUrl}" class="barcode-img" /><div class="barcode-id">${img.sequenceNumber}</div></div>`).join('')}
+      </div><script>window.onload=function(){setTimeout(()=>{window.print();window.close();},500);}<\/script></body></html>`);
+    win.document.close();
+  };
+
+  const handleDownloadPDF = async (items: any[], pCode: string, fileNamePart: string) => {
+    const toastId = toast.loading("Generating PDF...");
+    try {
+      const images = await generateBarcodeImages(items);
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      let yPos = 15;
+      images.forEach((img: any) => {
+        if (yPos + 30 > pageHeight - 15) { pdf.addPage(); yPos = 15; }
+        pdf.setFontSize(12); pdf.setFont("helvetica", "bold");
+        const tw = pdf.getTextWidth(pCode);
+        pdf.text(pCode, (pageWidth - tw) / 2, yPos);
+        pdf.addImage(img.dataUrl, "PNG", (pageWidth - 80) / 2, yPos + 2, 80, 12);
+        pdf.setFontSize(10); pdf.setFont("courier", "bold");
+        const idText = img.sequenceNumber.toString();
+        pdf.text(idText, (pageWidth - pdf.getTextWidth(idText)) / 2, yPos + 18);
+        pdf.setDrawColor(230); pdf.line(30, yPos + 22, pageWidth - 30, yPos + 22);
+        yPos += 27;
+      });
+      pdf.save(`Returns-${pCode}-${fileNamePart}.pdf`);
+      toast.success("PDF Downloaded", { id: toastId });
+    } catch { toast.error("Failed to generate PDF", { id: toastId }); }
+  };
+
   const columns = [
     {
       header: "Return Date",
@@ -113,7 +172,7 @@ export function Returns() {
       header: "Product",
       accessorKey: "product",
       cell: (item: any) =>
-        item.product ? `${item.product.designNo} / ${item.product.sku}` : "-",
+        item.product ? `${item.product.productCode}` : "-",
     },
     {
       header: "Category",
@@ -130,6 +189,37 @@ export function Returns() {
       ),
     },
     { header: "Qty", accessorKey: "qty", cell: (item: any) => <span className="font-bold">{item.qty}</span> },
+    {
+        header: "Seq #",
+        accessorKey: "sequenceNumber",
+        cell: (item: any) => <span className="text-xs font-mono text-gray-400">#{item.sequenceNumber}</span>
+    },
+    {
+        header: "Actions",
+        accessorKey: "actions",
+        cell: (item: any) => (
+            <div className="flex items-center gap-1">
+                <Button 
+                    onClick={() => handlePrint([item], item.product?.productCode || "")} 
+                    variant="outline" size="icon" className="h-8 w-8 text-gray-600" title="Print Barcode"
+                >
+                    <Printer className="w-4 h-4" />
+                </Button>
+                <Button 
+                    onClick={() => handleDownloadPDF([item], item.product?.productCode || "", item.sequenceNumber)} 
+                    variant="outline" size="icon" className="h-8 w-8 text-indigo-600" title="Download Barcode"
+                >
+                    <Download className="w-4 h-4" />
+                </Button>
+                <Button 
+                    onClick={() => handleDelete(item._id)} 
+                    variant="outline" size="icon" className="h-8 w-8 text-red-600 hover:bg-red-50 border-red-100" title="Delete"
+                >
+                    <Trash2 className="w-4 h-4" />
+                </Button>
+            </div>
+        )
+    }
   ];
 
   const hasSelectedSizes = Object.keys(sizeQtys).length > 0;
@@ -145,15 +235,16 @@ export function Returns() {
         </Button>
       </div>
 
-      <CommonDataTable
-        columns={columns}
-        data={returns}
-        pagination={pagination || { totalRecords: 0, currentPage: 1, totalPages: 0, limit: 10 }}
-        onPageChange={handlePageChange}
-        onSearchChange={setSearch}
-        onDelete={handleDelete}
-        loading={loading}
-      />
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden p-6 text-center">
+        <CommonDataTable
+          columns={columns}
+          data={returns}
+          pagination={pagination || { totalRecords: 0, currentPage: 1, totalPages: 0, limit: 10 }}
+          onPageChange={handlePageChange}
+          onSearchChange={setSearch}
+          loading={loading}
+        />
+      </div>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="sm:max-w-[520px]">
@@ -233,12 +324,67 @@ export function Returns() {
                     onChange={(e) => setReturnDate(e.target.value)}
                   />
                 </div>
-                <Button onClick={handleSubmit} className="w-full bg-indigo-600 hover:bg-indigo-700">
+                <Button onClick={handleSubmit} className="w-full bg-indigo-600 hover:bg-indigo-700 font-bold">
                   Submit Return
                 </Button>
               </>
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isSuccessOpen} onOpenChange={setIsSuccessOpen}>
+        <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <div className="flex items-center justify-between mr-8">
+                <DialogTitle className="flex items-center gap-2 text-green-600">
+                    <CheckCircle className="w-5 h-5" />
+                    Return Barcodes Generated
+                </DialogTitle>
+                <div className="flex gap-2">
+                    <Button 
+                        onClick={() => handleDownloadPDF(generatedBarcodes, selectedProduct?.productCode || "", "Bulk")} 
+                        variant="outline" size="sm" className="text-indigo-600 border-indigo-100"
+                    >
+                        <Download className="w-4 h-4 mr-2" /> Download All
+                    </Button>
+                    <Button 
+                        onClick={() => handlePrint(generatedBarcodes, selectedProduct?.productCode || "")} 
+                        size="sm" className="bg-gray-900 text-white"
+                    >
+                        <Printer className="w-4 h-4 mr-2" /> Print All
+                    </Button>
+                </div>
+            </div>
+          </DialogHeader>
+          
+          <div className="py-6 space-y-6">
+            <div className="bg-green-50 p-4 rounded-lg border border-green-100 flex items-center justify-between">
+                <div>
+                   <p className="font-bold text-green-800">Return Processed!</p>
+                   <p className="text-sm text-green-600">Generated {generatedBarcodes.length} new barcodes for the returned items.</p>
+                </div>
+                <Button variant="ghost" size="icon" onClick={() => setIsSuccessOpen(false)} className="text-green-600"><X /></Button>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+              {generatedBarcodes.map((item, idx) => {
+                  const sizeName = selectedProduct?.sizes?.find((s:any) => s._id === item.sizeId)?.name || 'N/A';
+                  return (
+                    <div key={idx} className="bg-white border rounded-lg p-3 flex flex-col items-center shadow-sm relative group">
+                        <Badge variant="outline" className="mb-2 text-[10px] font-bold bg-indigo-50 text-indigo-700 border-indigo-100">
+                            SIZE: {sizeName}
+                        </Badge>
+                        <BarcodeComponent value={item.barcode} displayText={item.sequenceNumber?.toString()} />
+                    </div>
+                  );
+              })}
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button onClick={() => setIsSuccessOpen(false)} className="bg-gray-900 text-white font-bold px-8">Close</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

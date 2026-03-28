@@ -42,14 +42,22 @@ export const fetchBillingById = createAsyncThunk('billing/fetchById', async (id:
   return response.data.data;
 });
 
-export const createBilling = createAsyncThunk('billing/create', async (data: any) => {
-  const response = await api.post('/billing/create', data);
-  return response.data.data;
+export const createBilling = createAsyncThunk('billing/create', async (data: any, { rejectWithValue }) => {
+  try {
+    const response = await api.post('/billing/create', data);
+    return response.data.data;
+  } catch (err: any) {
+    return rejectWithValue(err.response?.data?.message || err.message || 'Failed to create');
+  }
 });
 
-export const updateBilling = createAsyncThunk('billing/update', async ({ id, data }: { id: string; data: any }) => {
-  const response = await api.put(`/billing/${id}`, data);
-  return response.data.data;
+export const updateBilling = createAsyncThunk('billing/update', async ({ id, data }: { id: string; data: any }, { rejectWithValue }) => {
+  try {
+    const response = await api.put(`/billing/${id}`, data);
+    return response.data.data;
+  } catch (err: any) {
+    return rejectWithValue(err.response?.data?.message || err.message || 'Failed to update');
+  }
 });
 
 export const deleteBilling = createAsyncThunk('billing/delete', async (id: string) => {
@@ -57,9 +65,13 @@ export const deleteBilling = createAsyncThunk('billing/delete', async (id: strin
   return id;
 });
 
-export const scanBarcode = createAsyncThunk('billing/scan', async ({ barcode, customerId, alreadyScanned, selectedReservations }: { barcode: string; customerId?: string; alreadyScanned?: number; selectedReservations?: string[] }) => {
-  const response = await api.get(`/billing/scan/${barcode}`, { params: { customerId, alreadyScanned, selectedReservations } });
-  return response.data.data;
+export const scanBarcode = createAsyncThunk('billing/scan', async ({ barcode, customerId, alreadyScanned, selectedReservations }: { barcode: string; customerId?: string; alreadyScanned?: number; selectedReservations?: string[] }, { rejectWithValue }) => {
+  try {
+    const response = await api.get(`/billing/scan/${barcode}`, { params: { customerId, alreadyScanned, selectedReservations } });
+    return response.data.data;
+  } catch (err: any) {
+    return rejectWithValue(err.response?.data?.message || err.message || 'Scan failed');
+  }
 });
 
 export const fetchReservedItems = createAsyncThunk('billing/fetchReserved', async (customerId: string) => {
