@@ -106,28 +106,28 @@ export function Inventory() {
     if (canvas) {
         const toastId = toast.loading("Generating PDF...");
         try {
-            const pdf = new jsPDF("p", "mm", "a4");
-            const pageWidth = pdf.internal.pageSize.getWidth();
+            const pdf = new jsPDF({
+                orientation: "landscape",
+                unit: "mm",
+                format: [50, 25]
+            });
             const dataUrl = canvas.toDataURL("image/png");
 
             // SKU Text
-            pdf.setFontSize(14);
+            pdf.setFontSize(10);
             pdf.setFont("helvetica", "bold");
             const productCode = selectedItem?.product?.productCode || "";
-            const textWidth = pdf.getTextWidth(productCode);
-            pdf.text(productCode, (pageWidth - textWidth) / 2, 20);
+            const tw = pdf.getTextWidth(productCode);
+            pdf.text(productCode, (50 - tw) / 2, 6);
 
             // Barcode
-            const imgWidth = 100;
-            const imgHeight = 15;
-            pdf.addImage(dataUrl, "PNG", (pageWidth - imgWidth) / 2, 25, imgWidth, imgHeight);
+            pdf.addImage(dataUrl, "PNG", 5, 8, 40, 10);
 
             // Seq Number
-            pdf.setFontSize(12);
+            pdf.setFontSize(8);
             pdf.setFont("courier", "bold");
-            const idText = `# ${selectedItem.sequenceNumber}`;
-            const idWidth = pdf.getTextWidth(idText);
-            pdf.text(idText, (pageWidth - idWidth) / 2, 45);
+            const idText = selectedItem.sequenceNumber.toString();
+            pdf.text(idText, (50 - pdf.getTextWidth(idText)) / 2, 22);
 
             pdf.save(`barcode-${selectedItem.sequenceNumber}.pdf`);
             toast.success("PDF Downloaded", { id: toastId });
