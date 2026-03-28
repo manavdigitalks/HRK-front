@@ -141,15 +141,20 @@ export function StockEntry() {
     win.document.write(`
       <html><head><title>Labels - ${productCode}</title>
       <style>
-        @page { size: A4; margin: 10mm; }
-        body { margin: 0; padding: 0; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
-        .sticker { width: 100%; max-width: 600px; text-align: center; page-break-inside: avoid; padding: 10px 0; border-bottom: 0.5px solid #eee; display: flex; flex-direction: column; align-items: center; height: 30mm; justify-content: center; }
-        .sku-name { font-weight: 900; font-size: 14px; margin-bottom: 4px; text-transform: uppercase; }
-        .barcode-img { width: 450px; height: 12mm; object-fit: contain; }
-        .barcode-id { font-size: 12px; font-family: monospace; margin-top: 4px; font-weight: bold; }
-      </style></head><body><div>
+        @page { size: 50mm 25mm; margin: 0; }
+        body { margin: 0; padding: 0; font-family: sans-serif; }
+        .sticker { 
+            width: 50mm; height: 25mm; text-align: center; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            page-break-after: always; overflow: hidden;
+            padding: 2mm; box-sizing: border-box;
+        }
+        .sku-name { font-weight: 900; font-size: 10pt; margin-bottom: 1mm; text-transform: uppercase; line-height: 1; }
+        .barcode-img { width: 42mm; height: 10mm; object-fit: contain; }
+        .barcode-id { font-size: 8pt; font-family: monospace; margin-top: 1mm; font-weight: bold; line-height: 1; }
+      </style></head><body>
       ${images.map((img: any) => `<div class="sticker"><div class="sku-name">${productCode}</div><img src="${img.dataUrl}" class="barcode-img" /><div class="barcode-id">${img.sequenceNumber}</div></div>`).join('')}
-      </div><script>window.onload=function(){setTimeout(()=>{window.print();window.close();},500);}<\/script></body></html>`);
+<script>window.onload=function(){setTimeout(()=>{window.print();window.close();},500);}<\/script></body></html>`);
     win.document.close();
   };
 
@@ -159,21 +164,26 @@ export function StockEntry() {
     try {
       const images = await generateBarcodeImages(viewData.items);
       const productCode = viewData.entry.product?.productCode || "";
-      const pdf = new jsPDF("p", "mm", "a4");
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      let yPos = 15;
-      images.forEach((img: any) => {
-        if (yPos + 30 > pageHeight - 15) { pdf.addPage(); yPos = 15; }
-        pdf.setFontSize(12); pdf.setFont("helvetica", "bold");
-        const tw = pdf.getTextWidth(productCode);
-        pdf.text(productCode, (pageWidth - tw) / 2, yPos);
-        pdf.addImage(img.dataUrl, "PNG", (pageWidth - 80) / 2, yPos + 2, 80, 12);
-        pdf.setFontSize(10); pdf.setFont("courier", "bold");
-        const idText = img.sequenceNumber.toString();
-        pdf.text(idText, (pageWidth - pdf.getTextWidth(idText)) / 2, yPos + 18);
-        pdf.setDrawColor(230); pdf.line(30, yPos + 22, pageWidth - 30, yPos + 22);
-        yPos += 27;
+      const pdf = new jsPDF({
+          orientation: "landscape",
+          unit: "mm",
+          format: [50, 25]
+      });
+
+      images.forEach((img: any, idx: number) => {
+          if (idx > 0) pdf.addPage([50, 25], "landscape");
+          
+          pdf.setFontSize(10);
+          pdf.setFont("helvetica", "bold");
+          const tw = pdf.getTextWidth(productCode);
+          pdf.text(productCode, (50 - tw) / 2, 6);
+
+          pdf.addImage(img.dataUrl, "PNG", 5, 8, 40, 10);
+
+          pdf.setFontSize(8);
+          pdf.setFont("courier", "bold");
+          const idText = img.sequenceNumber.toString();
+          pdf.text(idText, (50 - pdf.getTextWidth(idText)) / 2, 22);
       });
       pdf.save(`${productCode}-${viewData.entry.invoiceNumber}.pdf`);
       toast.success("PDF Downloaded", { id: toastId });

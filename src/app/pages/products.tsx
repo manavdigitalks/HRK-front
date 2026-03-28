@@ -157,44 +157,34 @@ export function Products() {
     const win = window.open("", "_blank");
     if (!win) return;
 
-    const barcodeImages = await generateBarcodeImages();
+    const images = await generateBarcodeImages();
 
     win.document.write(`
       <html>
         <head>
           <title>Labels - ${selectedProduct?.productCode}</title>
           <style>
-            @page { size: A4; margin: 10mm; }
-            body { 
-                margin: 0; padding: 0; font-family: sans-serif; background: #fff;
-                display: flex; flex-direction: column; align-items: center;
-            }
-            .grid { 
-                width: 100%; display: flex; flex-direction: column; align-items: center; gap: 5px;
-            }
+            @page { size: 50mm 25mm; margin: 0; }
+            body { margin: 0; padding: 0; font-family: sans-serif; }
             .sticker { 
-                width: 100%; max-width: 600px; text-align: center; page-break-inside: avoid;
-                padding: 10px 0; border-bottom: 0.5px solid #eee; display: flex; flex-direction: column; align-items: center;
-                height: 30mm; justify-content: center;
+                width: 50mm; height: 25mm; text-align: center; 
+                display: flex; flex-direction: column; align-items: center; justify-content: center;
+                page-break-after: always; overflow: hidden;
+                padding: 2mm; box-sizing: border-box;
             }
-            .sku-name { font-weight: 900; font-size: 14px; margin-bottom: 4px; text-transform: uppercase; }
-            .barcode-img { width: 450px; height: 12mm; object-fit: contain; }
-            .barcode-id { font-size: 12px; font-family: monospace; margin-top: 4px; font-weight: bold; }
-            @media print {
-                .sticker { border-bottom: 0.5px solid #000; }
-            }
+            .sku-name { font-weight: 900; font-size: 10pt; margin-bottom: 1mm; text-transform: uppercase; line-height: 1; }
+            .barcode-img { width: 42mm; height: 10mm; object-fit: contain; }
+            .barcode-id { font-size: 8pt; font-family: monospace; margin-top: 1mm; font-weight: bold; line-height: 1; }
           </style>
         </head>
         <body>
-          <div class="grid">
-            ${barcodeImages.map((img: any) => `
-              <div class="sticker">
-                <div class="sku-name">${selectedProduct?.productCode}</div>
-                <img src="${img.dataUrl}" class="barcode-img" />
-                <div class="barcode-id">${img.sequenceNumber}</div>
-              </div>
-            `).join('')}
-          </div>
+          ${images.map((img: any) => `
+            <div class="sticker">
+              <div class="sku-name">${selectedProduct?.productCode}</div>
+              <img src="${img.dataUrl}" class="barcode-img" />
+              <div class="barcode-id">${img.sequenceNumber}</div>
+            </div>
+          `).join('')}
           <script>
             window.onload = function() { setTimeout(() => { window.print(); window.close(); }, 500); }
           </script>
@@ -207,45 +197,35 @@ export function Products() {
   const handleDownloadPDF = async () => {
     const toastId = toast.loading("Generating Document...");
     try {
-        const barcodeImages = await generateBarcodeImages();
-        const pdf = new jsPDF("p", "mm", "a4");
-        const pageWidth = pdf.internal.pageSize.getWidth();
-        const pageHeight = pdf.internal.pageSize.getHeight();
-        let yPos = 15;
-        const itemHeight = 30;
-
-        barcodeImages.forEach((img) => {
-            if (yPos + itemHeight > pageHeight - 15) {
-                pdf.addPage();
-                yPos = 15;
-            }
-
-            // SKU Text
-            pdf.setFontSize(12);
-            pdf.setFont("helvetica", "bold");
-            const textWidth = pdf.getTextWidth(selectedProduct?.productCode || "");
-            pdf.text(selectedProduct?.productCode || "", (pageWidth - textWidth) / 2, yPos);
-
-            // Barcode Image - Further reduced width
-            const imgWidth = 80; 
-            const imgHeight = 12;
-            pdf.addImage(img.dataUrl, "PNG", (pageWidth - imgWidth) / 2, yPos + 2, imgWidth, imgHeight);
-
-            // Display Sequence Number instead of random barcode string
-            pdf.setFontSize(10);
-            pdf.setFont("courier", "bold");
-            const idText = img.sequenceNumber.toString();
-            const idWidth = pdf.getTextWidth(idText);
-            pdf.text(idText, (pageWidth - idWidth) / 2, yPos + 18);
-
-            // Separator
-            pdf.setDrawColor(230);
-            pdf.line(30, yPos + 22, pageWidth - 30, yPos + 22);
-
-            yPos += 27;
+        const images = await generateBarcodeImages();
+        const pdf = new jsPDF({
+            orientation: "landscape",
+            unit: "mm",
+            format: [50, 25]
         });
 
-        pdf.save(`${selectedProduct?.productCode}.pdf`);
+        images.forEach((img: any, idx: number) => {
+            if (idx > 0) pdf.addPage([50, 25], "landscape");
+            
+            // Center the product code
+            pdf.setFontSize(10);
+            pdf.setFont("helvetica", "bold");
+            const productCode = selectedProduct?.productCode || "";
+            const tw = pdf.getTextWidth(productCode);
+            pdf.text(productCode, (50 - tw) / 2, 6);
+
+            // Barcode image
+            pdf.addImage(img.dataUrl, "PNG", 5, 8, 40, 10);
+
+            // Sequence number
+            pdf.setFontSize(8);
+            pdf.setFont("courier", "bold");
+            const idText = img.sequenceNumber.toString();
+            const idTw = pdf.getTextWidth(idText);
+            pdf.text(idText, (50 - idTw) / 2, 22);
+        });
+
+        pdf.save(`${selectedProduct?.productCode}-barcodes.pdf`);
         toast.success("PDF Downloaded", { id: toastId });
     } catch (err) {
         console.error(err);
