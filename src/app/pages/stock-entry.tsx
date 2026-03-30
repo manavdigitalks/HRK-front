@@ -148,24 +148,32 @@ export function StockEntry() {
     const printContent = `
       <html><head><title>Labels - ${productCode}</title>
       <style>
-        @page { size: auto; margin: 0 10mm 10mm 10mm; }
-        body { margin: 0; padding: 0; font-family: sans-serif; }
+        @page { size: auto; margin: 5mm; }
+        body { margin: 0; padding: 0; font-family: 'Inter', sans-serif; background: #fff; }
         .print-container { 
-            display: flex; flex-direction: column; align-items: center; gap: 6mm;
+            display: flex; flex-direction: column; align-items: center; 
             width: 100%;
         }
         .sticker { 
-            width: 50mm; height: 24mm; text-align: center; 
+            width: 50mm; height: 24mm; 
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             overflow: hidden;
             box-sizing: border-box;
             background: #fff;
-            break-inside: avoid;
+            margin-bottom: 2mm; 
             page-break-inside: avoid;
+            break-inside: avoid;
         }
-        .sku-name { font-size: 11px; font-weight: 900; text-transform: uppercase; color: #000; margin-bottom: 1.5mm; }
-        .barcode-img { width: 42mm; height: 11mm; object-fit: contain; margin-bottom: 1.5mm; }
-        .barcode-id { font-size: 10px; font-weight: 900; text-transform: uppercase; color: #000; font-family: sans-serif; }
+        .sku-name { 
+            font-size: 10px; font-weight: 900; text-transform: uppercase; 
+            color: #000; margin-bottom: 0.5mm; line-height: 1.1;
+            width: 100%; text-align: center; overflow: hidden; white-space: nowrap;
+        }
+        .barcode-img { width: 44mm; height: 11mm; object-fit: contain; }
+        .barcode-id { 
+            font-size: 10px; font-weight: 900; text-transform: uppercase; 
+            color: #000; font-family: 'Inter', sans-serif; margin-top: 0.5mm; 
+        }
       </style></head><body>
       <div class="print-container">
         ${images.map((img: any) => `
