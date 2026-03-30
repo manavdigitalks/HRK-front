@@ -134,7 +134,7 @@ export const printLabels = async (items: LabelItem[], productCode: string) => {
               <div class="sku-name">${productCode}</div>
               <div class="barcode-wrapper">
                 <img src="${img.dataUrl}" class="barcode-img" />
-                <div class="barcode-id">${img.barcode}</div>
+                <div class="barcode-id">${img.sequenceNumber}</div>
               </div>
             </div>
           `).join('')}
@@ -210,7 +210,7 @@ export const downloadLabelsPDF = async (items: LabelItem[], productCode: string,
             // Barcode String (Bottom) - Matching print:barcode-id
             pdf.setFontSize(9);
             pdf.setFont("helvetica", "bold");
-            const idText = img.barcode.toString().toUpperCase();
+            const idText = img.sequenceNumber.toString().toUpperCase();
             const idTw = pdf.getTextWidth(idText);
             pdf.text(idText, centerX + (stickerWidth - idTw) / 2, currentY + 21);
 
