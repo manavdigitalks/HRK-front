@@ -148,41 +148,35 @@ export function StockEntry() {
     const printContent = `
       <html><head><title>Labels - ${productCode}</title>
       <style>
-        @page { size: auto; margin: 5mm; }
+        @page { size: 50mm 25mm; margin: 0; }
         body { margin: 0; padding: 0; font-family: 'Inter', sans-serif; background: #fff; }
-        .print-container { 
-            display: flex; flex-direction: column; align-items: center; 
-            width: 100%;
-        }
         .sticker { 
-            width: 50mm; height: 24mm; 
+            width: 50mm; height: 25mm; 
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             overflow: hidden;
             box-sizing: border-box;
             background: #fff;
-            margin-bottom: 2mm; 
-            page-break-inside: avoid;
-            break-inside: avoid;
+            page-break-after: always;
+            break-after: page;
         }
+        .sticker:last-child { page-break-after: avoid; break-after: avoid; }
         .sku-name { 
-            font-size: 10px; font-weight: 900; text-transform: uppercase; 
+            font-size: 9pt; font-weight: 900; text-transform: uppercase; 
             color: #000; margin-bottom: 0.5mm; line-height: 1.1;
             width: 100%; text-align: center; overflow: hidden; white-space: nowrap;
         }
-        .barcode-img { width: 44mm; height: 11mm; object-fit: contain; }
+        .barcode-img { width: 46mm; height: 12mm; object-fit: contain; }
         .barcode-id { 
-            font-size: 10px; font-weight: 900; text-transform: uppercase; 
+            font-size: 8pt; font-weight: 900; text-transform: uppercase; 
             color: #000; font-family: 'Inter', sans-serif; margin-top: 0.5mm; 
         }
       </style></head><body>
-      <div class="print-container">
         ${images.map((img: any) => `
             <div class="sticker">
                 <div class="sku-name">${productCode}</div>
                 <img src="${img.dataUrl}" class="barcode-img" />
                 <div class="barcode-id">${img.sequenceNumber}</div>
             </div>`).join('')}
-      </div>
       <script>window.onload=function(){setTimeout(()=>{window.print();},500);}<\/script></body></html>`;
 
     const doc = iframe.contentWindow?.document;
@@ -203,46 +197,34 @@ export function StockEntry() {
         if (!viewData) return;
         const images = await generateBarcodeImages(viewData.items);
         const pdf = new jsPDF({
-            orientation: "portrait",
+            orientation: "landscape",
             unit: "mm",
-            format: "a4"
+            format: [25, 50]
         });
 
         const productCode = viewData.entry.product?.productCode || "";
-        const stickerWidth = 50;
-        const stickerHeight = 24;
-        const gap = 6;
-        const pageHeight = 297;
-        const margin = 10;
-        let currentY = margin;
-        const centerX = (210 - stickerWidth) / 2;
+        const W = 50, H = 25;
 
         images.forEach((img: any, idx: number) => {
-            if (currentY + stickerHeight > pageHeight - margin) {
-                pdf.addPage();
-                currentY = margin;
-            }
-            
+            if (idx > 0) pdf.addPage([25, 50], "landscape");
+
             // Product Code (Top)
-            pdf.setFontSize(10);
+            pdf.setFontSize(9);
             pdf.setFont("helvetica", "bold");
             const tw = pdf.getTextWidth(productCode);
-            pdf.text(productCode, centerX + (stickerWidth - tw) / 2, currentY + 6);
+            pdf.text(productCode, (W - tw) / 2, 6);
 
             // Barcode image (Middle)
-            pdf.addImage(img.dataUrl, "PNG", centerX + 4, currentY + 7, 42, 11);
+            pdf.addImage(img.dataUrl, "PNG", 2, 7, 46, 12);
 
             // Sequence number (Bottom)
             pdf.setFontSize(8);
-            pdf.setFont("helvetica", "bold");
             const idText = img.sequenceNumber.toString();
             const idTw = pdf.getTextWidth(idText);
-            pdf.text(idText, centerX + (stickerWidth - idTw) / 2, currentY + 22);
-
-            currentY += stickerHeight + gap;
+            pdf.text(idText, (W - idTw) / 2, 23);
         });
 
-        pdf.save(`${productCode}-labels-A4.pdf`);
+        pdf.save(`${productCode}-labels.pdf`);
         toast.success("PDF Downloaded", { id: toastId });
     } catch (err) {
         console.error(err);
