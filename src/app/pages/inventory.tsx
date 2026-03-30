@@ -168,14 +168,16 @@ export function Inventory() {
                         box-sizing: border-box; overflow: hidden;
                         background: #fff;
                     }
-                    .barcode-img { width: 42mm; height: 12mm; object-fit: contain; margin-bottom: 1.5mm; }
-                    .barcode-id { font-size: 11px; font-weight: 900; text-transform: uppercase; color: #000; font-family: sans-serif; line-height: 1.2; text-align: center; width: 100%; }
+                    .sku-name { font-size: 11px; font-weight: 900; text-transform: uppercase; color: #000; margin-bottom: 1.5mm; }
+                    .barcode-img { width: 42mm; height: 11mm; object-fit: contain; margin-bottom: 1.5mm; }
+                    .barcode-id { font-size: 10px; font-weight: 900; text-transform: uppercase; color: #000; font-family: sans-serif; }
                 </style>
             </head>
             <body onload="setTimeout(() => { window.print(); }, 300);">
                 <div class="sticker">
+                    <div class="sku-name">${productCode}</div>
                     <img src="${dataUrl}" class="barcode-img" />
-                    <div class="barcode-id">${productCode}-${seqNum}</div>
+                    <div class="barcode-id">${seqNum}</div>
                 </div>
             </body>
             </html>
