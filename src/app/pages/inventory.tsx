@@ -9,8 +9,8 @@ import { Badge } from "../components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../components/ui/dialog";
 import { AlertTriangle, Printer, Download } from "lucide-react";
 import { toast } from "sonner";
-import bwipjs from "bwip-js";
-import jsPDF from "jspdf";
+import { Barcode } from "../components/ui/barcode";
+import { printLabels, downloadLabelsPDF } from "@/lib/barcode-print-utils";
 
 import { fetchProductDropdown } from "@/redux/slices/productSlice";
 import { Combobox } from "../components/ui/combobox";
@@ -82,133 +82,16 @@ export function Inventory() {
   const openPrintModal = (item: any) => {
     setSelectedItem(item);
     setIsPrintModalOpen(true);
-    // Let's generate barcode on next tick
-    setTimeout(() => {
-        const canvas = document.getElementById('barcode-canvas-print') as HTMLCanvasElement;
-        if (canvas) {
-          try {
-            bwipjs.toCanvas(canvas, {
-              bcid: 'code128',       // Barcode type
-              text: item.barcode,    // Text to encode
-              scale: 5,              // Match products.tsx scale
-              height: 10,            // Bar height
-              includetext: false,    // Don't show the random barcode string in the image
-            });
-          } catch (e) {
-            console.error(e);
-          }
-        }
-    }, 100);
   };
 
   const handleDownload = async () => {
-    const canvas = document.getElementById('barcode-canvas-print') as HTMLCanvasElement;
-    if (canvas) {
-        const toastId = toast.loading("Generating PDF...");
-        try {
-            const pdf = new jsPDF({
-                orientation: "portrait",
-                unit: "mm",
-                format: "a4"
-            });
-            const dataUrl = canvas.toDataURL("image/png");
-
-            const productCode = selectedItem?.product?.productCode || "";
-            const seqNum = selectedItem?.sequenceNumber || "";
-            const stickerWidth = 50;
-            const stickerHeight = 24;
-            const centerX = (210 - stickerWidth) / 2;
-            const margin = 10;
-
-            // Product Code (Top)
-            pdf.setFontSize(10);
-            pdf.setFont("helvetica", "bold");
-            const tw = pdf.getTextWidth(productCode);
-            pdf.text(productCode, centerX + (stickerWidth - tw) / 2, margin + 6);
-
-            // Barcode Image (Middle)
-            pdf.addImage(dataUrl, "PNG", centerX + 4, margin + 7, 42, 11);
-
-            // Sequence Number (Bottom)
-            pdf.setFontSize(8);
-            pdf.setFont("helvetica", "bold");
-            const idText = seqNum.toString();
-            const idTw = pdf.getTextWidth(idText);
-            pdf.text(idText, centerX + (stickerWidth - idTw) / 2, margin + 22);
-
-            pdf.save(`${productCode}-barcode-${seqNum}-A4.pdf`);
-            toast.success("PDF Downloaded", { id: toastId });
-        } catch (err) {
-            console.error(err);
-            toast.error("Generation failed.", { id: toastId });
-        }
-    }
+    if (!selectedItem) return;
+    await downloadLabelsPDF([selectedItem], selectedItem.product?.productCode || "", selectedItem.sequenceNumber?.toString());
   };
 
-  const currentPrint = () => {
-     const canvas = document.getElementById('barcode-canvas-print') as HTMLCanvasElement;
-     if (canvas) {
-        const dataUrl = canvas.toDataURL();
-        
-        // Create a hidden iframe
-        const iframe = document.createElement('iframe');
-        iframe.style.position = 'fixed';
-        iframe.style.right = '0';
-        iframe.style.bottom = '0';
-        iframe.style.width = '0';
-        iframe.style.height = '0';
-        iframe.style.border = 'none';
-        document.body.appendChild(iframe);
-
-        const productCode = selectedItem?.product?.productCode || "";
-        const seqNum = selectedItem?.sequenceNumber || "";
-
-        const printContent = `
-            <html>
-            <head>
-                <title>Label - ${selectedItem.barcode}</title>
-                <style>
-                    @page { size: auto; margin: 5mm; }
-                    body { margin: 0; padding: 0; font-family: 'Inter', sans-serif; display: flex; flex-direction: column; align-items: center; background: #fff; }
-                    .sticker { 
-                        width: 50mm; height: 24mm; 
-                        display: flex; flex-direction: column; align-items: center; justify-content: center; 
-                        box-sizing: border-box; overflow: hidden;
-                        background: #fff;
-                    }
-                    .sku-name { 
-                        font-size: 10px; font-weight: 900; text-transform: uppercase; 
-                        color: #000; margin-bottom: 0.5mm; line-height: 1.1;
-                        width: 100%; text-align: center; overflow: hidden; white-space: nowrap;
-                    }
-                    .barcode-img { width: 44mm; height: 11mm; object-fit: contain; }
-                    .barcode-id { 
-                        font-size: 10px; font-weight: 900; text-transform: uppercase; 
-                        color: #000; font-family: 'Inter', sans-serif; margin-top: 0.5mm; 
-                    }
-                </style>
-            </head>
-            <body onload="setTimeout(() => { window.print(); }, 300);">
-                <div class="sticker">
-                    <div class="sku-name">${productCode}</div>
-                    <img src="${dataUrl}" class="barcode-img" />
-                    <div class="barcode-id">${seqNum}</div>
-                </div>
-            </body>
-            </html>
-        `;
-
-        const doc = iframe.contentWindow?.document;
-        if (doc) {
-            doc.write(printContent);
-            doc.close();
-            
-            // Clean up the iframe after printing
-            setTimeout(() => {
-                document.body.removeChild(iframe);
-            }, 2000);
-        }
-     }
+  const currentPrint = async () => {
+    if (!selectedItem) return;
+    await printLabels([selectedItem], selectedItem.product?.productCode || "");
   };
 
   const handleMarkLost = async () => {
@@ -526,7 +409,7 @@ export function Inventory() {
           
           <div className="py-8 flex flex-col items-center justify-center space-y-6">
               <div className="bg-white p-6 border rounded-xl shadow-inner flex flex-col items-center">
-                <canvas id="barcode-canvas-print" className="max-w-full h-auto"></canvas>
+                <Barcode value={selectedItem?.barcode} displayText={selectedItem?.sequenceNumber?.toString()} />
                 <div className="mt-4 text-center border-t pt-4 w-full">
                     <p className="font-bold text-lg text-gray-900">{selectedItem?.product?.productCode}</p>
                     <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">{selectedItem?.availableSizes?.map((s:any)=>s.name).join(", ")}</p>

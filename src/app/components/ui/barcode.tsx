@@ -30,8 +30,8 @@ export function Barcode({ value, displayText, className = "" }: BarcodeProps) {
   return (
     <div className={`flex flex-col items-center justify-center ${className}`}>
       <canvas ref={canvasRef} className="max-w-full h-auto" />
-      <span className="text-[10px] font-mono mt-1.5 font-bold text-gray-400">
-        ID: {displayText || value}
+      <span className="text-[10px] font-black mt-1 uppercase text-gray-900 leading-tight tracking-wider">
+        {displayText || value}
       </span>
     </div>
   );

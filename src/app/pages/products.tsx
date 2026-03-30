@@ -15,8 +15,7 @@ import { toast } from "sonner";
 import { CommonDataTable } from "../components/ui/common-data-table";
 import { Badge } from "../components/ui/badge";
 import { Barcode } from "../components/ui/barcode";
-import bwipjs from "bwip-js";
-import jsPDF from "jspdf";
+import { printLabels, downloadLabelsPDF } from "@/lib/barcode-print-utils";
 
 import { Combobox } from "../components/ui/combobox";
 
@@ -131,149 +130,14 @@ export function Products() {
     }
   };
 
-  const generateBarcodeImages = async () => {
-    return Promise.all(
-        currentInventory.map(item => {
-          return new Promise((resolve) => {
-            const canvas = document.createElement("canvas");
-            bwipjs.toCanvas(canvas, {
-              bcid: "code128",
-              text: item.barcode, // We still scan the random barcode for uniqueness
-              scale: 5,
-              height: 10,
-              includetext: false,
-            });
-            resolve({ 
-                barcode: item.barcode, 
-                sequenceNumber: item.sequenceNumber, 
-                dataUrl: canvas.toDataURL("image/png") 
-            });
-          });
-        })
-    ) as Promise<any[]>;
-  };
+
 
   const handlePrintLabels = async () => {
-    // Create a hidden iframe
-    const iframe = document.createElement('iframe');
-    iframe.style.position = 'fixed';
-    iframe.style.right = '0';
-    iframe.style.bottom = '0';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
-    iframe.style.border = 'none';
-    document.body.appendChild(iframe);
-
-    const images = await generateBarcodeImages();
-    const productCode = selectedProduct?.productCode || "";
-    
-    const printContent = `
-      <html>
-        <head>
-          <title>Labels - ${productCode}</title>
-          <style>
-            @page { size: auto; margin: 5mm; }
-            body { margin: 0; padding: 0; font-family: 'Inter', sans-serif; background: #fff; }
-            .print-container { 
-                display: flex; flex-direction: column; align-items: center; width: 100%;
-            }
-            .sticker { 
-                width: 50mm; height: 24mm; 
-                display: flex; flex-direction: column; align-items: center; justify-content: center;
-                overflow: hidden; box-sizing: border-box; background: #fff;
-                margin-bottom: 2mm; break-inside: avoid; page-break-inside: avoid;
-            }
-            .sku-name { 
-                font-size: 10px; font-weight: 900; text-transform: uppercase; 
-                color: #000; margin-bottom: 0.5mm; line-height: 1.1;
-                width: 100%; text-align: center; overflow: hidden; white-space: nowrap;
-            }
-            .barcode-img { width: 44mm; height: 11mm; object-fit: contain; }
-            .barcode-id { 
-                font-size: 10px; font-weight: 900; text-transform: uppercase; 
-                color: #000; font-family: 'Inter', sans-serif; margin-top: 0.5mm; 
-            }
-          </style>
-        </head>
-        <body>
-          <div class="print-container">
-          ${images.map((img: any) => `
-            <div class="sticker">
-              <div class="sku-name">${productCode}</div>
-              <img src="${img.dataUrl}" class="barcode-img" />
-              <div class="barcode-id">${img.sequenceNumber}</div>
-            </div>
-          `).join('')}
-          </div>
-          <script>
-            window.onload = function() { setTimeout(() => { window.print(); }, 500); }
-          </script>
-        </body>
-      </html>
-    `;
-
-    const doc = iframe.contentWindow?.document;
-    if (doc) {
-        doc.write(printContent);
-        doc.close();
-        
-        // Clean up the iframe after printing
-        setTimeout(() => {
-            document.body.removeChild(iframe);
-        }, 2000);
-    }
+    await printLabels(currentInventory, selectedProduct?.productCode || "");
   };
 
   const handleDownloadPDF = async () => {
-    const toastId = toast.loading("Generating Document...");
-    try {
-        const images = await generateBarcodeImages();
-        const pdf = new jsPDF({
-            orientation: "portrait",
-            unit: "mm",
-            format: "a4"
-        });
-
-        const productCode = selectedProduct?.productCode || "";
-        const stickerWidth = 50;
-        const stickerHeight = 24;
-        const gap = 6;
-        const pageHeight = 297;
-        const margin = 10;
-        let currentY = margin;
-        const centerX = (210 - stickerWidth) / 2;
-
-        images.forEach((img: any) => {
-            if (currentY + stickerHeight > pageHeight - margin) {
-                pdf.addPage();
-                currentY = margin;
-            }
-            
-            // Product Code (Top)
-            pdf.setFontSize(10);
-            pdf.setFont("helvetica", "bold");
-            const tw = pdf.getTextWidth(productCode);
-            pdf.text(productCode, centerX + (stickerWidth - tw) / 2, currentY + 6);
-
-            // Barcode image (Middle)
-            pdf.addImage(img.dataUrl, "PNG", centerX + 4, currentY + 7, 42, 11);
-
-            // Sequence number (Bottom)
-            pdf.setFontSize(8);
-            pdf.setFont("helvetica", "bold");
-            const idText = img.sequenceNumber.toString();
-            const idTw = pdf.getTextWidth(idText);
-            pdf.text(idText, centerX + (stickerWidth - idTw) / 2, currentY + 22);
-
-            currentY += stickerHeight + gap;
-        });
-
-        pdf.save(`${productCode}-labels-A4.pdf`);
-        toast.success("PDF Downloaded", { id: toastId });
-    } catch (err) {
-        console.error(err);
-        toast.error("Generation failed.");
-    }
+    await downloadLabelsPDF(currentInventory, selectedProduct?.productCode || "");
   };
 
   const columns = [
