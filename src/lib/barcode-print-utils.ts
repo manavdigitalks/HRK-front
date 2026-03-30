@@ -79,20 +79,20 @@ export const printLabels = async (items: LabelItem[], productCode: string) => {
                 display: flex; 
                 flex-direction: column; 
                 align-items: center; 
-                justify-content: center;
+                justify-content: space-between;
                 overflow: hidden; 
                 box-sizing: border-box; 
                 background: #fff;
                 break-inside: avoid; 
                 page-break-inside: avoid;
                 margin: 0;
+                padding: 2.5mm 0; /* Adding safe vertical padding */
             }
             .sku-name { 
                 font-size: 8px; 
                 font-weight: 900; 
                 text-transform: uppercase; 
                 color: #000; 
-                margin-top: 1mm;
                 line-height: 1;
                 width: 100%; 
                 text-align: center; 
@@ -102,28 +102,27 @@ export const printLabels = async (items: LabelItem[], productCode: string) => {
             }
             .barcode-wrapper {
                 width: 100%;
-                flex: 1;
                 display: flex;
                 flex-direction: column;
                 align-items: center;
                 justify-content: center;
                 padding: 0;
+                gap: 1mm;
             }
             .barcode-img { 
                 width: 44mm; 
-                height: 10mm; /* Reduced to ensure fit */
+                height: 8.5mm; /* Reduced to ensure it never crops */
                 object-fit: contain; 
             }
             .barcode-id { 
-                font-size: 9px; 
+                font-size: 8px; /* Slightly smaller for safety */
                 font-weight: 900;
                 text-transform: uppercase; 
                 color: #000; 
-                margin-bottom: 2mm;
                 line-height: 1;
                 text-align: center;
                 width: 100%;
-                letter-spacing: 0.05em;
+                letter-spacing: 0.1em;
             }
           </style>
         </head>
