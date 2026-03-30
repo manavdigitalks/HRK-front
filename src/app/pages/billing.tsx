@@ -6,7 +6,7 @@ import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { fetchAllBillings, deleteBilling } from "@/redux/slices/billingSlice";
 import { CommonDataTable } from "../components/ui/common-data-table";
 import { useRouter } from "next/navigation";
-import { Edit, Trash2, Receipt, Download } from "lucide-react";
+import { Edit, Trash2, Receipt, Download, Printer } from "lucide-react";
 import api from "@/lib/axios";
 
 export function Billing() {
@@ -34,6 +34,28 @@ export function Billing() {
       window.URL.revokeObjectURL(url);
     } catch {
       toast.error("Failed to download packing slip");
+    }
+  };
+
+  const handlePrintSlip = async (id: string) => {
+    try {
+      const response = await api.get(`/billing/${id}/packing-slip`, { responseType: "blob" });
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: "application/pdf" }));
+      
+      const iframe = document.createElement("iframe");
+      iframe.style.display = "none";
+      iframe.src = url;
+      document.body.appendChild(iframe);
+      
+      iframe.onload = () => {
+        iframe.contentWindow?.print();
+        setTimeout(() => {
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(iframe);
+        }, 3000);
+      };
+    } catch {
+      toast.error("Failed to print packing slip");
     }
   };
 
@@ -66,6 +88,9 @@ export function Billing() {
         accessorKey: "actions", 
         cell: (item: any) => (
             <div className="flex gap-2">
+                <Button variant="outline" size="icon" onClick={() => handlePrintSlip(item._id)} className="h-8 w-8 text-blue-600" title="Direct Print">
+                    <Printer className="w-4 h-4" />
+                </Button>
                 <Button variant="outline" size="icon" onClick={() => handleDownloadSlip(item._id, item.billNumber)} className="h-8 w-8 text-green-600" title="Download Packing Slip">
                     <Download className="w-4 h-4" />
                 </Button>
