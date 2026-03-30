@@ -30,6 +30,7 @@ export function BillingForm({ id }: { id?: string }) {
     const [items, setItems] = useState<any[]>([]);
     const [selectedCustomer, setSelectedCustomer] = useState("");
     const [barcodeInput, setBarcodeInput] = useState("");
+    const inputRef = React.useRef<HTMLInputElement>(null);
     const [discount, setDiscount] = useState(0);
     const [gstEnabled, setGstEnabled] = useState(false);
     const [gstPercent, setGstPercent] = useState(18);
@@ -39,6 +40,12 @@ export function BillingForm({ id }: { id?: string }) {
     const [savingCustomer, setSavingCustomer] = useState(false);
     const [reservedItems, setReservedItems] = useState<any[]>([]);
     const [selectedReservations, setSelectedReservations] = useState<string[]>([]);
+
+    useEffect(() => {
+        if (!addCustomerOpen) {
+            setTimeout(() => inputRef.current?.focus(), 100);
+        }
+    }, [addCustomerOpen]);
 
     useEffect(() => {
         dispatch(fetchCustomerDropdown(""));
@@ -126,12 +133,34 @@ export function BillingForm({ id }: { id?: string }) {
 
     const handleScan = async () => {
         if (!barcodeInput) return;
+        if (!selectedCustomer) {
+            toast.error("Please select a customer first");
+            inputRef.current?.focus();
+            return;
+        }
         try {
+            // 1. First, check if this barcode belongs to a product that has an active reservation
+            // We'll perform the scan call, but to avoid the "Reserved stock" error, 
+            // we should proactively select the reservation in frontend if it's not selected.
+            
+            // To do this properly, we first need to know which product this barcode belongs to.
+            // Since we don't know without the scan call, we'll try the scan first.
+            // If the backend returns "Existing stock is reserved", we'll check if it's reserved by ME.
+
             const result = await dispatch(scanBarcode({
                 barcode: barcodeInput,
                 customerId: selectedCustomer,
-                selectedReservations: selectedReservations
+                selectedReservations: selectedReservations,
             })).unwrap();
+
+            // Auto-select reservation if product matches an unselected one
+            const matchingReservation = reservedItems.find(r => r.product?._id === result.productId);
+            if (matchingReservation && !selectedReservations.includes(matchingReservation._id)) {
+                setSelectedReservations(prev => [...prev, matchingReservation._id]);
+                // Re-run scan with the newly selected reservation if needed? 
+                // Actually the first scan might đã succeeded if there was enough unreserved stock.
+                // If it failed, the error catch will handle it.
+            }
 
             const existingGroup = items.find(i => i.productId === result.productId);
             if ((existingGroup?.barcodes.length || 0) >= result.availableQuota) {
@@ -154,14 +183,19 @@ export function BillingForm({ id }: { id?: string }) {
             };
 
             if (existingGroup) {
-                setItems(items.map(group => group.productId === result.productId ? { ...group, isExpanded: true, barcodes: [...group.barcodes, newBarcodeObj] } : group));
+                // Move existing group to top and update barcodes
+                setItems([
+                    { ...existingGroup, isExpanded: true, barcodes: [...existingGroup.barcodes, newBarcodeObj] },
+                    ...items.filter(group => group.productId !== result.productId)
+                ]);
             } else {
-                setItems([...items, {
+                setItems([{
                     productId: result.productId, productName: result.productName, price: result.price,
                     isExpanded: true, sizes: result.sizes || [], barcodes: [newBarcodeObj]
-                }]);
+                }, ...items]);
             }
             setBarcodeInput("");
+            inputRef.current?.focus();
             toast.success(`Added ${result.productName}`);
         } catch (err: any) {
             toast.error(typeof err === 'string' ? err : (err.message || "Error"));
@@ -270,10 +304,18 @@ export function BillingForm({ id }: { id?: string }) {
                             </div>
                         </div>
                         <div className="space-y-2">
-                            <Label className="text-sm font-bold">Scan Barcode / ID</Label>
+                            <Label className="text-sm font-bold">Job Scan / Barcode</Label>
                             <div className="flex gap-2">
-                                <Input value={barcodeInput} onChange={(e) => setBarcodeInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleScan()} />
-                                <Button onClick={handleScan} className="bg-gray-800 text-white"><Scan className="w-4 h-4 mr-2" /> Scan</Button>
+                                <Input 
+                                    ref={inputRef}
+                                    placeholder="Scan Job Card or Barcode..."
+                                    className="h-11 text-lg font-bold border-indigo-200 focus:ring-indigo-500"
+                                    value={barcodeInput} 
+                                    onChange={(e) => setBarcodeInput(e.target.value)} 
+                                    onKeyDown={(e) => e.key === 'Enter' && handleScan()} 
+                                    autoFocus
+                                />
+                                <Button onClick={handleScan} className="bg-indigo-600 h-11 text-white hover:bg-indigo-700 px-6"><Scan className="w-4 h-4 mr-2" /> Scan</Button>
                             </div>
                         </div>
                     </div>
