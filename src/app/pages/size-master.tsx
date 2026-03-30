@@ -1,26 +1,140 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
-import { Plus } from "lucide-react";
+import { Plus, GripVertical, Edit, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
-import { fetchAllSizeMasters, createSizeMaster, updateSizeMaster, deleteSizeMaster } from "@/redux/slices/sizeMasterSlice";
-import { CommonDataTable } from "../components/ui/common-data-table";
+import {
+  fetchAllSizeMasters,
+  fetchSizeMasterList,
+  createSizeMaster,
+  updateSizeMaster,
+  deleteSizeMaster,
+  reorderSizeMasters,
+} from "@/redux/slices/sizeMasterSlice";
+import { DndProvider, useDrag, useDrop } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
+
+type DragItem = {
+  id: string;
+  index: number;
+};
+
+function SortableSizeRow({
+  item,
+  index,
+  moveRow,
+  onEdit,
+  onDelete,
+}: {
+  item: any;
+  index: number;
+  moveRow: (fromIndex: number, toIndex: number) => void;
+  onEdit: (item: any) => void;
+  onDelete: (id: string) => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  const [, drop] = useDrop<DragItem, void, unknown>(
+    {
+      accept: "SIZE_ROW",
+      hover(dragItem, monitor) {
+        if (!ref.current) return;
+        const dragIndex = dragItem.index;
+        const hoverIndex = index;
+        if (dragIndex === hoverIndex) return;
+
+        const hoverBoundingRect = ref.current.getBoundingClientRect();
+        const clientOffset = monitor.getClientOffset();
+        if (!clientOffset) return;
+
+        const hoverMiddleY = (hoverBoundingRect.bottom - hoverBoundingRect.top) / 2;
+        const hoverClientY = clientOffset.y - hoverBoundingRect.top;
+
+        if (dragIndex < hoverIndex && hoverClientY < hoverMiddleY) return;
+        if (dragIndex > hoverIndex && hoverClientY > hoverMiddleY) return;
+
+        moveRow(dragIndex, hoverIndex);
+        dragItem.index = hoverIndex;
+      },
+    },
+    [index, moveRow]
+  );
+
+  const [{ isDragging }, drag] = useDrag(
+    () => ({
+      type: "SIZE_ROW",
+      item: { id: item._id, index },
+      collect: (monitor) => ({
+        isDragging: monitor.isDragging(),
+      }),
+    }),
+    [item, index]
+  );
+
+  drag(drop(ref));
+
+  return (
+    <div
+      ref={ref}
+      className={`flex items-center gap-4 rounded-2xl border border-gray-200 bg-white px-4 py-3 shadow-sm transition-opacity ${
+        isDragging ? "opacity-50" : "opacity-100"
+      }`}
+    >
+      <div className="cursor-grab text-gray-400">
+        <GripVertical className="h-5 w-5" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-gray-900">{item.name}</p>
+        <p className="text-xs text-gray-500">{item.description || "No description"}</p>
+      </div>
+      <div className="text-sm font-medium text-gray-600 w-12 text-right">{item.order ?? "-"}</div>
+      <div className="flex items-center gap-1">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => onEdit(item)}
+          className="h-9 w-9 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-lg"
+        >
+          <Edit className="w-4 h-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => onDelete(item._id)}
+          className="h-9 w-9 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg"
+        >
+          <Trash2 className="w-4 h-4" />
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 export function SizeMaster() {
   const dispatch = useAppDispatch();
-  const { sizeMasters, loading, pagination } = useAppSelector((state) => state.sizeMaster);
+  const { listItems, loading, pagination } = useAppSelector((state) => state.sizeMaster);
   const [isOpen, setIsOpen] = useState(false);
   const [editingSize, setEditingSize] = useState<any>(null);
   const [formData, setFormData] = useState({ name: "", description: "" });
   const [search, setSearch] = useState("");
+  const [orderItems, setOrderItems] = useState<any[]>([]);
+  const [isSavingOrder, setIsSavingOrder] = useState(false);
 
   useEffect(() => {
     dispatch(fetchAllSizeMasters({ page: 1, limit: 10, search }));
   }, [dispatch, search]);
+
+  useEffect(() => {
+    dispatch(fetchSizeMasterList());
+  }, [dispatch]);
+
+  useEffect(() => {
+    setOrderItems(listItems);
+  }, [listItems]);
 
   const handlePageChange = (page: number) => {
     dispatch(fetchAllSizeMasters({ page, limit: 10, search }));
@@ -49,6 +163,7 @@ export function SizeMaster() {
       }
       setIsOpen(false);
       dispatch(fetchAllSizeMasters({ page: pagination.currentPage, limit: 10, search }));
+      dispatch(fetchSizeMasterList());
     } catch (err: any) {
       toast.error(err.message || "Failed to save size");
     }
@@ -60,16 +175,35 @@ export function SizeMaster() {
         await dispatch(deleteSizeMaster(id)).unwrap();
         toast.success("Size deleted!");
         dispatch(fetchAllSizeMasters({ page: pagination.currentPage, limit: 10, search }));
+        dispatch(fetchSizeMasterList());
       } catch (err: any) {
         toast.error(err.message || "Failed to delete size");
       }
     }
   };
 
-  const columns = [
-    { header: "Size Name", accessorKey: "name" },
-    { header: "Description", accessorKey: "description" },
-  ];
+  const moveOrderItem = (fromIndex: number, toIndex: number) => {
+    setOrderItems((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      return next;
+    });
+  };
+
+  const handleSaveOrder = async () => {
+    try {
+      setIsSavingOrder(true);
+      await dispatch(reorderSizeMasters(orderItems.map((item) => item._id))).unwrap();
+      toast.success("Order saved successfully!");
+      dispatch(fetchAllSizeMasters({ page: pagination.currentPage, limit: 10, search }));
+      dispatch(fetchSizeMasterList());
+    } catch (err: any) {
+      toast.error(err.message || "Failed to save order");
+    } finally {
+      setIsSavingOrder(false);
+    }
+  };
 
   return (
     <div className="p-4 lg:p-6 space-y-6">
@@ -84,16 +218,42 @@ export function SizeMaster() {
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden p-6">
-        <CommonDataTable
-          columns={columns}
-          data={sizeMasters}
-          pagination={pagination}
-          onPageChange={handlePageChange}
-          onSearchChange={setSearch}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-          loading={loading}
-        />
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900">Reorder Sizes</h2>
+            <p className="text-sm text-gray-500">Drag and drop the size items below to save backend order.</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              onClick={handleSaveOrder}
+              className="bg-indigo-600 hover:bg-indigo-700"
+              disabled={isSavingOrder || orderItems.length === 0}
+            >
+              {isSavingOrder ? "Saving..." : "Save Order"}
+            </Button>
+          </div>
+        </div>
+
+        <DndProvider backend={HTML5Backend}>
+          <div className="space-y-2">
+            {orderItems.length > 0 ? (
+              orderItems.map((item, index) => (
+                <SortableSizeRow
+                  key={item._id}
+                  item={item}
+                  index={index}
+                  moveRow={moveOrderItem}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                />
+              ))
+            ) : (
+              <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-6 text-center text-sm text-gray-500">
+                No sizes available to reorder.
+              </div>
+            )}
+          </div>
+        </DndProvider>
       </div>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>

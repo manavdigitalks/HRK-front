@@ -3,6 +3,7 @@ import api from '@/lib/axios';
 
 interface SizeMasterState {
   sizeMasters: any[];
+  listItems: any[];
   dropdownItems: any[];
   currentSizeMaster: any;
   pagination: {
@@ -17,6 +18,7 @@ interface SizeMasterState {
 
 const initialState: SizeMasterState = {
   sizeMasters: [],
+  listItems: [],
   dropdownItems: [],
   currentSizeMaster: null,
   pagination: {
@@ -38,6 +40,16 @@ export const fetchAllSizeMasters = createAsyncThunk(
     return response.data;
   }
 );
+
+export const fetchSizeMasterList = createAsyncThunk('sizeMaster/fetchList', async () => {
+  const response = await api.get('/sizemaster/list');
+  return response.data.data;
+});
+
+export const reorderSizeMasters = createAsyncThunk('sizeMaster/reorder', async (ids: string[]) => {
+  const response = await api.put('/sizemaster/reorder', { ids });
+  return response.data;
+});
 
 export const fetchSizeMasterById = createAsyncThunk('sizeMaster/fetchById', async (id: string) => {
   const response = await api.get(`/sizemaster/${id}`);
@@ -87,18 +99,25 @@ const sizeMasterSlice = createSlice({
         state.loading = false;
         state.error = action.error.message || 'Failed to fetch size masters';
       })
+      .addCase(fetchSizeMasterList.fulfilled, (state, action) => {
+        state.listItems = action.payload;
+      })
       .addCase(fetchSizeMasterById.fulfilled, (state, action) => {
         state.currentSizeMaster = action.payload;
       })
       .addCase(createSizeMaster.fulfilled, (state, action) => {
-        state.sizeMasters.unshift(action.payload);
+        state.sizeMasters.push(action.payload);
+        state.listItems.push(action.payload);
       })
       .addCase(updateSizeMaster.fulfilled, (state, action) => {
         const index = state.sizeMasters.findIndex((s) => s._id === action.payload._id);
         if (index !== -1) state.sizeMasters[index] = action.payload;
+        const listIndex = state.listItems.findIndex((s) => s._id === action.payload._id);
+        if (listIndex !== -1) state.listItems[listIndex] = action.payload;
       })
       .addCase(deleteSizeMaster.fulfilled, (state, action) => {
         state.sizeMasters = state.sizeMasters.filter((s) => s._id !== action.payload);
+        state.listItems = state.listItems.filter((s) => s._id !== action.payload);
       })
       .addCase(fetchSizeDropdown.fulfilled, (state, action) => {
         state.dropdownItems = action.payload;
