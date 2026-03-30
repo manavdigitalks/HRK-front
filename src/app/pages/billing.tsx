@@ -5,19 +5,32 @@ import { toast } from "sonner";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { fetchAllBillings, deleteBilling } from "@/redux/slices/billingSlice";
 import { CommonDataTable } from "../components/ui/common-data-table";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Edit, Trash2, Receipt, Download, Printer } from "lucide-react";
 import api from "@/lib/axios";
+import { Suspense } from "react";
 
-export function Billing() {
+function BillingContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const dispatch = useAppDispatch();
   const { billings, loading, pagination } = useAppSelector((state) => state.billing);
   const [search, setSearch] = useState("");
 
+  const printId = searchParams.get("id");
+  const shouldPrint = searchParams.get("print");
+
   useEffect(() => {
     dispatch(fetchAllBillings({ page: 1, limit: 10, search }));
   }, [dispatch, search]);
+
+  useEffect(() => {
+    if (shouldPrint === "true" && printId) {
+      handlePrintSlip(printId);
+      // Clean up URL without reloading
+      router.replace("/billing");
+    }
+  }, [shouldPrint, printId, router]);
 
   const handlePageChange = (page: number) => {
     dispatch(fetchAllBillings({ page, limit: 10, search }));
@@ -48,11 +61,13 @@ export function Billing() {
       document.body.appendChild(iframe);
       
       iframe.onload = () => {
-        iframe.contentWindow?.print();
-        setTimeout(() => {
-          window.URL.revokeObjectURL(url);
-          document.body.removeChild(iframe);
-        }, 3000);
+        if (iframe.contentWindow) {
+          iframe.contentWindow.onafterprint = () => {
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(iframe);
+          };
+          iframe.contentWindow.print();
+        }
       };
     } catch {
       toast.error("Failed to print packing slip");
@@ -129,5 +144,13 @@ export function Billing() {
         />
       </div>
     </div>
+  );
+}
+
+export function Billing() {
+  return (
+    <Suspense fallback={<div className="p-6 text-center text-gray-400">Loading...</div>}>
+      <BillingContent />
+    </Suspense>
   );
 }

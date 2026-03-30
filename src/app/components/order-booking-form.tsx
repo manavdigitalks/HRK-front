@@ -197,6 +197,7 @@ export function OrderBookingForm({ id, initialData }: { id?: string; initialData
                       type="number"
                       min={1}
                       value={item.totalSets}
+                      onFocus={(e) => e.target.select()}
                       onChange={(e) => {
                         const newItems = [...items];
                         newItems[index].totalSets = parseInt(e.target.value) || 0;

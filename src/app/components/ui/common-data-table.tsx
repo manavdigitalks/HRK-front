@@ -111,7 +111,7 @@ export function CommonDataTable({
                 </TableRow>
               ) : (
                 data.map((item, index) => (
-                  <TableRow key={item._id} className="hover:bg-indigo-50/30 transition-colors">
+                  <TableRow key={item._id || index} className="hover:bg-indigo-50/30 transition-colors">
                     <TableCell className="font-medium text-gray-500">
                       {(pagination.currentPage - 1) * pagination.limit + index + 1}
                     </TableCell>

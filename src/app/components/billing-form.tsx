@@ -75,6 +75,14 @@ export function BillingForm({ id }: { id?: string }) {
                 setGstEnabled(bill.gstEnabled || false);
                 setGstPercent(bill.gstPercent || 0);
                 setDiscount(bill.discountPercent || 0);
+
+                // Load existing reservations from the bill
+                if (bill.fulfilledReservations?.length) {
+                    const existingRes = bill.fulfilledReservations;
+                    setReservedItems(existingRes);
+                    setSelectedReservations(existingRes.map((r: any) => r._id));
+                }
+
                 setLoading(false);
             }).catch(() => {
                 toast.error("Failed to load billing");
@@ -85,15 +93,25 @@ export function BillingForm({ id }: { id?: string }) {
 
     useEffect(() => {
         if (selectedCustomer && selectedCustomer !== "walk-in") {
-            dispatch(fetchReservedItems(selectedCustomer)).unwrap().then((items) => {
-                setReservedItems(items);
-                setSelectedReservations(items.map((i: any) => i._id));
+            dispatch(fetchReservedItems(selectedCustomer)).unwrap().then((fetched) => {
+                setReservedItems(prev => {
+                    const filteredPrev = prev.filter(i => (i.customer?._id || i.customer) === selectedCustomer);
+                    const map = new Map();
+                    filteredPrev.forEach(i => map.set(i._id, i));
+                    fetched.forEach((i: any) => map.set(i._id, i));
+                    return Array.from(map.values());
+                });
+                
+                // If this is a new bill (no 'id'), select all by default
+                if (!id) {
+                    setSelectedReservations(fetched.map((i: any) => i._id));
+                }
             });
         } else {
             setReservedItems([]);
-            setSelectedReservations([]);
+            if (!id) setSelectedReservations([]);
         }
-    }, [selectedCustomer, dispatch]);
+    }, [selectedCustomer, dispatch, id]);
 
     const handleAddCustomer = async () => {
         if (!newCustomer.name || !newCustomer.number) return;
@@ -151,28 +169,39 @@ export function BillingForm({ id }: { id?: string }) {
         }
     };
 
-    const toggleExpand = (productId: string) => setItems(items.map(item => item.productId === productId ? { ...item, isExpanded: !item.isExpanded } : item));
-    const removeGroup = (productId: string) => setItems(items.filter((item) => item.productId !== productId));
-    const removeBarcode = (productId: string, barcode: string) => setItems(items.map(group => {
+    const toggleExpand = (productId: string) => {
+        setItems(prev => prev.map(item => 
+            item.productId === productId ? { ...item, isExpanded: !item.isExpanded } : item
+        ));
+    };
+
+    const removeGroup = (productId: string) => setItems(prev => prev.filter((item) => item.productId !== productId));
+    
+    const removeBarcode = (productId: string, barcode: string) => setItems(prev => prev.map(group => {
         if (group.productId === productId) return { ...group, barcodes: group.barcodes.filter((b: any) => b.barcode !== barcode) };
         return group;
     }).filter(group => group.barcodes.length > 0));
 
     const toggleSoldSize = (productId: string, barcode: string, sizeId: string) => {
-        setItems(prevItems => prevItems.map(group => {
-            if (group.productId === productId) {
-                return {
-                    ...group,
-                    barcodes: group.barcodes.map((b: any) => {
-                        if (b.barcode !== barcode) return b;
-                        const currentSold = b.soldSizes || [];
-                        const newSold = currentSold.includes(sizeId) ? currentSold.filter((id: string) => id !== sizeId) : [...currentSold, sizeId];
-                        return { ...b, soldSizes: newSold, qty: newSold.length };
-                    })
-                };
-            }
-            return group;
-        }));
+        setItems(prevItems => {
+            const newItems = prevItems.map(group => {
+                if (group.productId === productId) {
+                    return {
+                        ...group,
+                        barcodes: group.barcodes.map((b: any) => {
+                            if (b.barcode !== barcode) return b;
+                            const currentSold = b.soldSizes || [];
+                            const newSold = currentSold.includes(sizeId) 
+                                ? currentSold.filter((id: string) => id !== sizeId) 
+                                : [...currentSold, sizeId];
+                            return { ...b, soldSizes: newSold, qty: newSold.length };
+                        })
+                    };
+                }
+                return group;
+            });
+            return newItems;
+        });
     };
 
     const subtotal = items.reduce((sum, g) => sum + g.barcodes.reduce((gs: number, b: any) => gs + (b.qty * g.price), 0), 0);
@@ -200,11 +229,19 @@ export function BillingForm({ id }: { id?: string }) {
                 items: flattened, subtotal, discountPercent: discount,
                 gstEnabled, gstPercent, totalAmount: total, fulfilledReservationIds: selectedReservations
             };
-            if (id) await dispatch(updateBilling({ id, data: billingData })).unwrap();
-            else await dispatch(createBilling(billingData)).unwrap();
-            router.push("/billing");
+
+            if (id) {
+                await dispatch(updateBilling({ id, data: billingData })).unwrap();
+                toast.success("Packing Slip Updated!");
+                router.push("/billing");
+            } else {
+                const result = await dispatch(createBilling(billingData)).unwrap();
+                toast.success("Packing Slip Saved!");
+                // Redirect to list with print trigger
+                router.push(`/billing?print=true&id=${result._id}`);
+            }
         } catch (err: any) {
-            toast.error(typeof err === 'string' ? err : (err.message || "Failed"));
+            toast.error(typeof err === 'string' ? err : (err.message || "Failed to save record"));
         }
     };
 
@@ -220,7 +257,6 @@ export function BillingForm({ id }: { id?: string }) {
                         <p className="text-gray-500 text-sm">Scan and manage dispatch</p>
                     </div>
                 </div>
-                <Button onClick={handleSave} className="bg-indigo-600 font-bold px-10 h-11 text-white hover:bg-indigo-700"><Save className="w-4 h-4 mr-2" /> {id ? "Update" : "Save"}</Button>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
