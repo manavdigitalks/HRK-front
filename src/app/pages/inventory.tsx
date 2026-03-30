@@ -141,32 +141,55 @@ export function Inventory() {
      const canvas = document.getElementById('barcode-canvas-print') as HTMLCanvasElement;
      if (canvas) {
         const dataUrl = canvas.toDataURL();
-        const win = window.open('', '_blank');
-        if (win) {
-            const productCode = selectedItem?.product?.productCode || "";
-            win.document.write(`
-                <html>
-                <head>
-                    <title>Label - ${selectedItem.barcode}</title>
-                    <style>
-                        @page { size: A4; margin: 10mm; }
-                        body { margin: 0; padding: 0; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
-                        .sticker { width: 100%; max-width: 600px; text-align: center; page-break-inside: avoid; padding: 10px 0; border-bottom: 0.5px solid #eee; display: flex; flex-direction: column; align-items: center; height: 35mm; justify-content: center; }
-                        .sku-name { font-weight: 900; font-size: 16px; margin-bottom: 6px; text-transform: uppercase; }
-                        .barcode-img { width: 450px; height: 14mm; object-fit: contain; }
-                        .barcode-id { font-size: 14px; font-family: monospace; margin-top: 6px; font-weight: bold; }
-                    </style>
-                </head>
-                <body onload="window.print(); window.close();">
-                    <div class="sticker">
-                        <div class="sku-name">${productCode}</div>
-                        <img src="${dataUrl}" class="barcode-img" />
-                        <div class="barcode-id">${selectedItem.sequenceNumber}</div>
-                    </div>
-                </body>
-                </html>
-            `);
-            win.document.close();
+        
+        // Create a hidden iframe
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.right = '0';
+        iframe.style.bottom = '0';
+        iframe.style.width = '0';
+        iframe.style.height = '0';
+        iframe.style.border = 'none';
+        document.body.appendChild(iframe);
+
+        const productCode = selectedItem?.product?.productCode || "";
+        const seqNum = selectedItem?.sequenceNumber || "";
+
+        const printContent = `
+            <html>
+            <head>
+                <title>Label - ${selectedItem.barcode}</title>
+                <style>
+                    @page { size: auto; margin: 10mm; }
+                    body { margin: 0; padding: 0; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
+                    .sticker { 
+                        width: 50mm; height: 24mm; 
+                        display: flex; flex-direction: column; align-items: center; justify-content: center; 
+                        box-sizing: border-box; overflow: hidden;
+                        background: #fff;
+                    }
+                    .barcode-img { width: 42mm; height: 12mm; object-fit: contain; margin-bottom: 1.5mm; }
+                    .barcode-id { font-size: 11px; font-weight: 900; text-transform: uppercase; color: #000; font-family: sans-serif; line-height: 1.2; text-align: center; width: 100%; }
+                </style>
+            </head>
+            <body onload="setTimeout(() => { window.print(); }, 300);">
+                <div class="sticker">
+                    <img src="${dataUrl}" class="barcode-img" />
+                    <div class="barcode-id">${productCode}-${seqNum}</div>
+                </div>
+            </body>
+            </html>
+        `;
+
+        const doc = iframe.contentWindow?.document;
+        if (doc) {
+            doc.write(printContent);
+            doc.close();
+            
+            // Clean up the iframe after printing
+            setTimeout(() => {
+                document.body.removeChild(iframe);
+            }, 2000);
         }
      }
   };

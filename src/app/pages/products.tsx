@@ -154,44 +154,69 @@ export function Products() {
   };
 
   const handlePrintLabels = async () => {
-    const win = window.open("", "_blank");
-    if (!win) return;
+    // Create a hidden iframe
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = 'none';
+    document.body.appendChild(iframe);
 
     const images = await generateBarcodeImages();
-
-    win.document.write(`
+    const productCode = selectedProduct?.productCode || "";
+    
+    const printContent = `
       <html>
         <head>
-          <title>Labels - ${selectedProduct?.productCode}</title>
+          <title>Labels - ${productCode}</title>
           <style>
-            @page { size: 50mm 25mm portrait; margin: 0; }
+            @page { size: auto; margin: 10mm; }
             body { margin: 0; padding: 0; font-family: sans-serif; }
-            .sticker { 
-                width: 50mm; height: 25mm; text-align: center; 
-                display: flex; flex-direction: column; align-items: center; justify-content: center;
-                page-break-after: always; overflow: hidden;
-                padding: 2mm; box-sizing: border-box;
+            .print-container { 
+                display: flex; flex-direction: column; align-items: center; gap: 6mm;
+                width: 100%;
             }
-            .sku-name { font-weight: 900; font-size: 10pt; margin-bottom: 1mm; text-transform: uppercase; line-height: 1; }
-            .barcode-img { width: 42mm; height: 10mm; object-fit: contain; }
-            .barcode-id { font-size: 8pt; font-family: monospace; margin-top: 1mm; font-weight: bold; line-height: 1; }
+            .sticker { 
+                width: 50mm; height: 24mm; text-align: center; 
+                display: flex; flex-direction: column; align-items: center; justify-content: center;
+                overflow: hidden;
+                box-sizing: border-box;
+                background: #fff;
+                break-inside: avoid;
+                page-break-inside: avoid;
+            }
+            .barcode-img { width: 42mm; height: 12mm; object-fit: contain; margin-bottom: 1.5mm; }
+            .barcode-id { font-size: 11px; font-weight: 900; text-transform: uppercase; color: #000; font-family: sans-serif; line-height: 1.2; text-align: center; width: 100%; }
           </style>
         </head>
         <body>
+          <div class="print-container">
           ${images.map((img: any) => `
             <div class="sticker">
-              <div class="sku-name">${selectedProduct?.productCode}</div>
-              <img src="${img.dataUrl}" class="barcode-img" />
-              <div class="barcode-id">${img.sequenceNumber}</div>
+                <img src="${img.dataUrl}" class="barcode-img" />
+                <div class="barcode-id">${productCode}-${img.sequenceNumber}</div>
             </div>
           `).join('')}
+          </div>
           <script>
-            window.onload = function() { setTimeout(() => { window.print(); window.close(); }, 500); }
+            window.onload = function() { setTimeout(() => { window.print(); }, 500); }
           </script>
         </body>
       </html>
-    `);
-    win.document.close();
+    `;
+
+    const doc = iframe.contentWindow?.document;
+    if (doc) {
+        doc.write(printContent);
+        doc.close();
+        
+        // Clean up the iframe after printing
+        setTimeout(() => {
+            document.body.removeChild(iframe);
+        }, 2000);
+    }
   };
 
   const handleDownloadPDF = async () => {
