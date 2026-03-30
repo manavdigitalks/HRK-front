@@ -176,33 +176,54 @@ export function Returns() {
   };
 
   const handleDownloadPDF = async (items: any[], pCode: string, fileNamePart: string) => {
-    const toastId = toast.loading("Generating PDF...");
+    const toastId = toast.loading("Generating Document...");
     try {
-      const images = await generateBarcodeImages(items);
-      const pdf = new jsPDF({
-          orientation: "landscape",
-          unit: "mm",
-          format: [50, 25]
-      });
+        const images = await generateBarcodeImages(items);
+        const pdf = new jsPDF({
+            orientation: "portrait",
+            unit: "mm",
+            format: "a4"
+        });
 
-      images.forEach((img: any, idx: number) => {
-          if (idx > 0) pdf.addPage([50, 25], "landscape");
-          
-          pdf.setFontSize(10);
-          pdf.setFont("helvetica", "bold");
-          const tw = pdf.getTextWidth(pCode);
-          pdf.text(pCode, (50 - tw) / 2, 6);
+        const stickerWidth = 50;
+        const stickerHeight = 24;
+        const gap = 6;
+        const pageHeight = 297;
+        const margin = 10;
+        let currentY = margin;
+        const centerX = (210 - stickerWidth) / 2;
 
-          pdf.addImage(img.dataUrl, "PNG", 5, 8, 40, 10);
+        images.forEach((img: any, idx: number) => {
+            if (currentY + stickerHeight > pageHeight - margin) {
+                pdf.addPage();
+                currentY = margin;
+            }
+            
+            // Product Code (Top)
+            pdf.setFontSize(10);
+            pdf.setFont("helvetica", "bold");
+            const tw = pdf.getTextWidth(pCode);
+            pdf.text(pCode, centerX + (stickerWidth - tw) / 2, currentY + 6);
 
-          pdf.setFontSize(8);
-          pdf.setFont("courier", "bold");
-          const idText = img.sequenceNumber.toString();
-          pdf.text(idText, (50 - pdf.getTextWidth(idText)) / 2, 22);
-      });
-      pdf.save(`Returns-${pCode}-${fileNamePart}.pdf`);
-      toast.success("PDF Downloaded", { id: toastId });
-    } catch { toast.error("Failed to generate PDF", { id: toastId }); }
+            // Barcode image (Middle)
+            pdf.addImage(img.dataUrl, "PNG", centerX + 4, currentY + 7, 42, 11);
+
+            // Sequence number (Bottom)
+            pdf.setFontSize(8);
+            pdf.setFont("helvetica", "bold");
+            const idText = img.sequenceNumber.toString();
+            const idTw = pdf.getTextWidth(idText);
+            pdf.text(idText, centerX + (stickerWidth - idTw) / 2, currentY + 22);
+
+            currentY += stickerHeight + gap;
+        });
+
+        pdf.save(`${pCode}-${fileNamePart}-A4.pdf`);
+        toast.success("PDF Downloaded", { id: toastId });
+    } catch (err) {
+        console.error(err);
+        toast.error("Generation failed.");
+    }
   };
 
   const columns = [

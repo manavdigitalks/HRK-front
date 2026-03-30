@@ -107,31 +107,39 @@ export function Inventory() {
         const toastId = toast.loading("Generating PDF...");
         try {
             const pdf = new jsPDF({
-                orientation: "landscape",
+                orientation: "portrait",
                 unit: "mm",
-                format: [50, 25]
+                format: "a4"
             });
             const dataUrl = canvas.toDataURL("image/png");
 
-            // SKU Text
+            const productCode = selectedItem?.product?.productCode || "";
+            const seqNum = selectedItem?.sequenceNumber || "";
+            const stickerWidth = 50;
+            const stickerHeight = 24;
+            const centerX = (210 - stickerWidth) / 2;
+            const margin = 10;
+
+            // Product Code (Top)
             pdf.setFontSize(10);
             pdf.setFont("helvetica", "bold");
-            const productCode = selectedItem?.product?.productCode || "";
             const tw = pdf.getTextWidth(productCode);
-            pdf.text(productCode, (50 - tw) / 2, 6);
+            pdf.text(productCode, centerX + (stickerWidth - tw) / 2, margin + 6);
 
-            // Barcode
-            pdf.addImage(dataUrl, "PNG", 5, 8, 40, 10);
+            // Barcode Image (Middle)
+            pdf.addImage(dataUrl, "PNG", centerX + 4, margin + 7, 42, 11);
 
-            // Seq Number
+            // Sequence Number (Bottom)
             pdf.setFontSize(8);
-            pdf.setFont("courier", "bold");
-            const idText = selectedItem.sequenceNumber.toString();
-            pdf.text(idText, (50 - pdf.getTextWidth(idText)) / 2, 22);
+            pdf.setFont("helvetica", "bold");
+            const idText = seqNum.toString();
+            const idTw = pdf.getTextWidth(idText);
+            pdf.text(idText, centerX + (stickerWidth - idTw) / 2, margin + 22);
 
-            pdf.save(`barcode-${selectedItem.sequenceNumber}.pdf`);
+            pdf.save(`${productCode}-barcode-${seqNum}-A4.pdf`);
             toast.success("PDF Downloaded", { id: toastId });
         } catch (err) {
+            console.error(err);
             toast.error("Generation failed.", { id: toastId });
         }
     }

@@ -226,33 +226,46 @@ export function Products() {
     try {
         const images = await generateBarcodeImages();
         const pdf = new jsPDF({
-            orientation: "landscape",
+            orientation: "portrait",
             unit: "mm",
-            format: [50, 25]
+            format: "a4"
         });
 
-        images.forEach((img: any, idx: number) => {
-            if (idx > 0) pdf.addPage([50, 25], "landscape");
+        const productCode = selectedProduct?.productCode || "";
+        const stickerWidth = 50;
+        const stickerHeight = 24;
+        const gap = 6;
+        const pageHeight = 297;
+        const margin = 10;
+        let currentY = margin;
+        const centerX = (210 - stickerWidth) / 2;
+
+        images.forEach((img: any) => {
+            if (currentY + stickerHeight > pageHeight - margin) {
+                pdf.addPage();
+                currentY = margin;
+            }
             
-            // Center the product code
+            // Product Code (Top)
             pdf.setFontSize(10);
             pdf.setFont("helvetica", "bold");
-            const productCode = selectedProduct?.productCode || "";
             const tw = pdf.getTextWidth(productCode);
-            pdf.text(productCode, (50 - tw) / 2, 6);
+            pdf.text(productCode, centerX + (stickerWidth - tw) / 2, currentY + 6);
 
-            // Barcode image
-            pdf.addImage(img.dataUrl, "PNG", 5, 8, 40, 10);
+            // Barcode image (Middle)
+            pdf.addImage(img.dataUrl, "PNG", centerX + 4, currentY + 7, 42, 11);
 
-            // Sequence number
+            // Sequence number (Bottom)
             pdf.setFontSize(8);
-            pdf.setFont("courier", "bold");
+            pdf.setFont("helvetica", "bold");
             const idText = img.sequenceNumber.toString();
             const idTw = pdf.getTextWidth(idText);
-            pdf.text(idText, (50 - idTw) / 2, 22);
+            pdf.text(idText, centerX + (stickerWidth - idTw) / 2, currentY + 22);
+
+            currentY += stickerHeight + gap;
         });
 
-        pdf.save(`${selectedProduct?.productCode}-barcodes.pdf`);
+        pdf.save(`${productCode}-labels-A4.pdf`);
         toast.success("PDF Downloaded", { id: toastId });
     } catch (err) {
         console.error(err);
