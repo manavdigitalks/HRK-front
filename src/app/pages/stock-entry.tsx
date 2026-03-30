@@ -142,16 +142,11 @@ export function StockEntry() {
     const printContent = `
       <html><head><title>Labels - ${productCode}</title>
       <style>
-        @page { size: 50mm 25mm; margin: 0; }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { width: 50mm; font-family: Arial, sans-serif; background: #fff; }
-        .sticker {
-          width: 50mm; height: 25mm;
-          display: flex; flex-direction: column;
-          align-items: center; justify-content: center;
-          page-break-after: always;
-          overflow: hidden;
-          padding: 1mm 2mm;
+        @page { size: auto; margin: 0 10mm 10mm 10mm; }
+        body { margin: 0; padding: 0; font-family: sans-serif; }
+        .print-container { 
+            display: flex; flex-direction: column; align-items: center; gap: 6mm;
+            width: 100%;
         }
         .sticker:last-child { page-break-after: avoid; }
         .sku-name { font-size: 9pt; font-weight: 900; text-transform: uppercase; color: #000; margin-bottom: 1mm; letter-spacing: 0.3px; }
