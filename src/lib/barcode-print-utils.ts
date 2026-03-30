@@ -58,7 +58,11 @@ export const printLabels = async (items: LabelItem[], productCode: string) => {
           <style>
             @page { 
                 size: 50mm 24mm; 
-                margin: 0mm; 
+                margin: 0; 
+            }
+            * {
+                box-sizing: border-box;
+                -webkit-print-color-adjust: exact;
             }
             body { 
                 margin: 0; 
@@ -67,11 +71,7 @@ export const printLabels = async (items: LabelItem[], productCode: string) => {
                 background: #fff; 
             }
             .print-container { 
-                display: flex; 
-                flex-direction: column; 
-                align-items: center; 
-                width: 100%;
-                gap: 0; 
+                width: 50mm;
             }
             .sticker { 
                 width: 50mm; 
@@ -79,26 +79,25 @@ export const printLabels = async (items: LabelItem[], productCode: string) => {
                 display: flex; 
                 flex-direction: column; 
                 align-items: center; 
-                justify-content: space-between;
+                justify-content: center;
                 overflow: hidden; 
-                box-sizing: border-box; 
                 background: #fff;
-                break-inside: avoid; 
-                page-break-inside: avoid;
+                page-break-after: always;
                 margin: 0;
-                padding: 2.5mm 0; /* Adding safe vertical padding */
+                padding: 1mm 0;
             }
             .sku-name { 
-                font-size: 8px; 
-                font-weight: 900; 
+                font-size: 10px; 
+                font-weight: 800; 
                 text-transform: uppercase; 
                 color: #000; 
-                line-height: 1;
+                line-height: 1.2;
                 width: 100%; 
                 text-align: center; 
                 overflow: hidden; 
                 white-space: nowrap;
-                letter-spacing: -0.01em;
+                letter-spacing: 0.02em;
+                margin-bottom: 1mm;
             }
             .barcode-wrapper {
                 width: 100%;
@@ -106,17 +105,17 @@ export const printLabels = async (items: LabelItem[], productCode: string) => {
                 flex-direction: column;
                 align-items: center;
                 justify-content: center;
-                padding: 0;
-                gap: 1mm;
+                gap: 0.5mm;
             }
             .barcode-img { 
-                width: 44mm; 
-                height: 8.5mm; /* Reduced to ensure it never crops */
-                object-fit: contain; 
+                width: 42mm; 
+                height: 9mm;
+                object-fit: contain;
+                display: block;
             }
             .barcode-id { 
-                font-size: 8px; /* Slightly smaller for safety */
-                font-weight: 900;
+                font-size: 10px;
+                font-weight: 800;
                 text-transform: uppercase; 
                 color: #000; 
                 line-height: 1;
@@ -130,7 +129,7 @@ export const printLabels = async (items: LabelItem[], productCode: string) => {
           <div class="print-container">
           ${images.map((img: any) => `
             <div class="sticker">
-              <div class="sku-name">${productCode}</div>
+              <div class="sku-name">${productCode || ''}</div>
               <div class="barcode-wrapper">
                 <img src="${img.dataUrl}" class="barcode-img" />
                 <div class="barcode-id">${img.sequenceNumber}</div>
@@ -142,7 +141,6 @@ export const printLabels = async (items: LabelItem[], productCode: string) => {
             window.onload = function() { 
                 setTimeout(() => { 
                     window.print(); 
-                    // No self-close script here to ensure it works across browsers
                 }, 500); 
             }
           </script>
