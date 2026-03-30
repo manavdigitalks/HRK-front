@@ -84,7 +84,7 @@ export const printLabels = async (items: LabelItem[], productCode: string) => {
                 background: #fff;
                 page-break-after: always;
                 margin: 0;
-                padding: 1mm 0;
+                padding: 5mm 0 2mm 0; /* Increased top padding to push content down */
             }
             .sku-name { 
                 font-size: 10px; 
@@ -97,7 +97,7 @@ export const printLabels = async (items: LabelItem[], productCode: string) => {
                 overflow: hidden; 
                 white-space: nowrap;
                 letter-spacing: 0.02em;
-                margin-bottom: 1mm;
+                margin-bottom: 1.5mm; /* Slightly more gap below name */
             }
             .barcode-wrapper {
                 width: 100%;
@@ -109,7 +109,7 @@ export const printLabels = async (items: LabelItem[], productCode: string) => {
             }
             .barcode-img { 
                 width: 42mm; 
-                height: 9mm;
+                height: 8mm; /* Reduced slightly to fit better with the new padding */
                 object-fit: contain;
                 display: block;
             }
