@@ -168,7 +168,7 @@ export function Inventory() {
             <head>
                 <title>Label - ${selectedItem.barcode}</title>
                 <style>
-                    @page { size: auto; margin: 10mm; }
+                    @page { size: auto; margin: 0 10mm 10mm 10mm; }
                     body { margin: 0; padding: 0; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
                     .sticker { 
                         width: 50mm; height: 24mm; 

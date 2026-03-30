@@ -172,7 +172,7 @@ export function Products() {
         <head>
           <title>Labels - ${productCode}</title>
           <style>
-            @page { size: auto; margin: 10mm; }
+            @page { size: auto; margin: 0 10mm 10mm 10mm; }
             body { margin: 0; padding: 0; font-family: sans-serif; }
             .print-container { 
                 display: flex; flex-direction: column; align-items: center; gap: 6mm;
