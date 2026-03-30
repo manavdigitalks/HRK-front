@@ -62,7 +62,7 @@ export const printLabels = async (items: LabelItem[], productCode: string) => {
             }
             body { 
                 margin: 0; 
-                padding: 5mm; 
+                padding: 0; 
                 font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
                 background: #fff; 
             }
@@ -71,7 +71,7 @@ export const printLabels = async (items: LabelItem[], productCode: string) => {
                 flex-direction: column; 
                 align-items: center; 
                 width: 100%;
-                gap: 4mm; /* Matching print:gap-4 (16px) approx */
+                gap: 0; 
             }
             .sticker { 
                 width: 50mm; 
@@ -85,41 +85,42 @@ export const printLabels = async (items: LabelItem[], productCode: string) => {
                 background: #fff;
                 break-inside: avoid; 
                 page-break-inside: avoid;
-                padding-top: 1mm; /* print:pt-1 approx */
+                margin: 0;
             }
             .sku-name { 
                 font-size: 8px; 
                 font-weight: 900; 
                 text-transform: uppercase; 
                 color: #000; 
-                margin-bottom: 0.5mm; 
+                margin-top: 1mm;
                 line-height: 1;
                 width: 100%; 
                 text-align: center; 
                 overflow: hidden; 
                 white-space: nowrap;
-                letter-spacing: -0.02em;
+                letter-spacing: -0.01em;
             }
             .barcode-wrapper {
                 width: 100%;
+                flex: 1;
                 display: flex;
                 flex-direction: column;
                 align-items: center;
                 justify-content: center;
-                padding: 1mm; /* p-1 approx */
+                padding: 0;
             }
             .barcode-img { 
                 width: 44mm; 
-                height: 11mm; 
+                height: 10mm; /* Reduced to ensure fit */
                 object-fit: contain; 
             }
             .barcode-id { 
-                font-size: 10px; 
-                font-weight: 900; /* font-black */
+                font-size: 9px; 
+                font-weight: 900;
                 text-transform: uppercase; 
                 color: #000; 
-                margin-top: 1mm; /* mt-1 */
-                line-height: 1.1;
+                margin-bottom: 2mm;
+                line-height: 1;
                 text-align: center;
                 width: 100%;
                 letter-spacing: 0.05em;
