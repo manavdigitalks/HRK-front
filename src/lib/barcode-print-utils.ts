@@ -72,19 +72,22 @@ export const printLabels = async (items: LabelItem[], productCode: string) => {
             }
             .print-container { 
                 width: 50mm;
+                margin: 0;
+                padding: 0;
             }
             .sticker { 
                 width: 50mm; 
-                height: 24mm; 
+                height: 23.5mm; /* Slightly smaller than 24mm to prevent spillover/skipping */
                 display: flex; 
                 flex-direction: column; 
                 align-items: center; 
-                justify-content: center;
+                justify-content: flex-start; /* Switch to flex-start with the top padding for better control */
                 overflow: hidden; 
                 background: #fff;
                 page-break-after: always;
+                page-break-inside: avoid;
                 margin: 0;
-                padding: 5mm 0 2mm 0; /* Increased top padding to push content down */
+                padding: 4mm 0 0 0; /* Adjusted padding with flex-start */
             }
             .sku-name { 
                 font-size: 10px; 
@@ -97,7 +100,7 @@ export const printLabels = async (items: LabelItem[], productCode: string) => {
                 overflow: hidden; 
                 white-space: nowrap;
                 letter-spacing: 0.02em;
-                margin-bottom: 1.5mm; /* Slightly more gap below name */
+                margin-bottom: 2mm; /* Increased gap */
             }
             .barcode-wrapper {
                 width: 100%;
