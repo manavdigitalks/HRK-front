@@ -40,6 +40,7 @@ export function BillingForm({ id }: { id?: string }) {
     const [savingCustomer, setSavingCustomer] = useState(false);
     const [reservedItems, setReservedItems] = useState<any[]>([]);
     const [selectedReservations, setSelectedReservations] = useState<string[]>([]);
+    const [autoScanEnabled, setAutoScanEnabled] = useState(true);
 
     useEffect(() => {
         if (!addCustomerOpen) {
@@ -131,7 +132,7 @@ export function BillingForm({ id }: { id?: string }) {
         } catch { toast.error("Failed"); } finally { setSavingCustomer(false); }
     };
 
-    const handleScan = async () => {
+    const handleScan = React.useCallback(async () => {
         if (!barcodeInput) return;
         if (!selectedCustomer) {
             toast.error("Please select a customer first");
@@ -139,13 +140,13 @@ export function BillingForm({ id }: { id?: string }) {
             return;
         }
         try {
-            // 1. First, check if this barcode belongs to a product that has an active reservation
-            // We'll perform the scan call, but to avoid the "Reserved stock" error, 
-            // we should proactively select the reservation in frontend if it's not selected.
-            
-            // To do this properly, we first need to know which product this barcode belongs to.
-            // Since we don't know without the scan call, we'll try the scan first.
-            // If the backend returns "Existing stock is reserved", we'll check if it's reserved by ME.
+            // Check if already in current list to avoid unnecessary API calls
+            const alreadyAdded = items.flatMap(g => g.barcodes.map((b: any) => b.barcode)).includes(barcodeInput);
+            if (alreadyAdded) {
+                toast.warning("Already added");
+                setBarcodeInput("");
+                return;
+            }
 
             const result = await dispatch(scanBarcode({
                 barcode: barcodeInput,
@@ -157,19 +158,11 @@ export function BillingForm({ id }: { id?: string }) {
             const matchingReservation = reservedItems.find(r => r.product?._id === result.productId);
             if (matchingReservation && !selectedReservations.includes(matchingReservation._id)) {
                 setSelectedReservations(prev => [...prev, matchingReservation._id]);
-                // Re-run scan with the newly selected reservation if needed? 
-                // Actually the first scan might đã succeeded if there was enough unreserved stock.
-                // If it failed, the error catch will handle it.
             }
 
             const existingGroup = items.find(i => i.productId === result.productId);
             if ((existingGroup?.barcodes.length || 0) >= result.availableQuota) {
                 toast.error(`Availability Limit for ${result.productName}.`);
-                setBarcodeInput(""); return;
-            }
-
-            if (items.flatMap(g => g.barcodes.map((b: any) => b.barcode)).includes(result.barcode)) {
-                toast.warning("Already added");
                 setBarcodeInput(""); return;
             }
 
@@ -183,7 +176,6 @@ export function BillingForm({ id }: { id?: string }) {
             };
 
             if (existingGroup) {
-                // Move existing group to top and update barcodes
                 setItems([
                     { ...existingGroup, isExpanded: true, barcodes: [...existingGroup.barcodes, newBarcodeObj] },
                     ...items.filter(group => group.productId !== result.productId)
@@ -201,7 +193,17 @@ export function BillingForm({ id }: { id?: string }) {
             toast.error(typeof err === 'string' ? err : (err.message || "Error"));
             setBarcodeInput("");
         }
-    };
+    }, [barcodeInput, selectedCustomer, selectedReservations, items, reservedItems, dispatch, inputRef]);
+
+    // Auto-scan effect
+    useEffect(() => {
+        if (autoScanEnabled && barcodeInput && barcodeInput.length >= 2) {
+            const timer = setTimeout(() => {
+                handleScan();
+            }, 600); // 600ms debounce for manual typing comfort
+            return () => clearTimeout(timer);
+        }
+    }, [barcodeInput, handleScan, autoScanEnabled]);
 
     const toggleExpand = (productId: string) => {
         setItems(prev => prev.map(item => 
@@ -304,7 +306,13 @@ export function BillingForm({ id }: { id?: string }) {
                             </div>
                         </div>
                         <div className="space-y-2">
-                            <Label className="text-sm font-bold">Job Scan / Barcode</Label>
+                            <div className="flex items-center justify-between">
+                                <Label className="text-sm font-bold">Job Scan / Barcode</Label>
+                                <div className="flex items-center gap-2">
+                                    <span className={`text-[10px] font-bold uppercase ${autoScanEnabled ? "text-indigo-600" : "text-gray-400"}`}>Auto-Scan</span>
+                                    <Switch checked={autoScanEnabled} onCheckedChange={setAutoScanEnabled} className="scale-75" />
+                                </div>
+                            </div>
                             <div className="flex gap-2">
                                 <Input 
                                     ref={inputRef}
