@@ -102,6 +102,16 @@ export function Products() {
       return;
     }
 
+    if (formData.purchasePrice <= 0) {
+      toast.error("Purchase price must be greater than zero");
+      return;
+    }
+
+    if (formData.salePrice <= 0) {
+      toast.error("Sale price must be greater than zero");
+      return;
+    }
+
     if (selectedSizes.length === 0) {
       toast.error("Please select at least one size");
       return;
