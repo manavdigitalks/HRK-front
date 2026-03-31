@@ -160,9 +160,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
             onClick={() => setSidebarOpen(false)}
           />
           <aside className="fixed inset-y-0 left-0 w-64 bg-gradient-to-b from-indigo-900 to-indigo-800 text-white shadow-2xl">
-            <div className="flex items-center justify-between h-16 px-4 bg-white border-b">
+            <div className="flex items-center justify-between h-20 px-4 bg-white border-b">
               <div className="flex items-center ml-2">
-                <img src="/hrk_logo.png" alt="HRK Logo" className="h-8 w-auto" />
+                <img src="/hrk_logo.png" alt="HRK Logo" className="h-12 w-auto" />
               </div>
               <Button
                 variant="ghost"
