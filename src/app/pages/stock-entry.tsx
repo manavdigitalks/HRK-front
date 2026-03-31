@@ -277,7 +277,7 @@ export function StockEntry() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Number of Full Sets</Label>
-                <Input type="number" value={formData.totalSets} onChange={(e) => setFormData({...formData, totalSets: +e.target.value})} />
+                <Input type="number" min={0} value={formData.totalSets} onChange={(e) => setFormData({...formData, totalSets: Math.max(0, +e.target.value)})} />
               </div>
               <div className="bg-gray-100 rounded-md p-3 flex flex-col justify-center">
                 <span className="text-[10px] font-bold text-gray-400 uppercase">Total Items</span>

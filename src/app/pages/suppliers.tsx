@@ -60,6 +60,16 @@ export function Suppliers() {
   };
 
   const handleSave = async () => {
+    // Validation
+    if (!formData.name.trim()) {
+      toast.error("Supplier name is required");
+      return;
+    }
+    if (!formData.number || formData.number.length !== 10) {
+      toast.error("Please enter a valid 10-digit contact number");
+      return;
+    }
+
     try {
       if (editingSupplier) {
         await dispatch(updateSupplier({ id: editingSupplier._id, data: formData })).unwrap();

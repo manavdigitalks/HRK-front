@@ -39,6 +39,11 @@ export function TransportMaster() {
   };
 
   const handleSave = async () => {
+    if (!formData.name.trim()) {
+      toast.error("Transport name is required");
+      return;
+    }
+
     try {
       if (editingTransport) {
         await dispatch(updateTransportMaster({ id: editingTransport._id, data: formData })).unwrap();

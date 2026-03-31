@@ -199,8 +199,9 @@ export function OrderBookingForm({ id, initialData }: { id?: string; initialData
                       value={item.totalSets}
                       onFocus={(e) => e.target.select()}
                       onChange={(e) => {
+                        const val = parseInt(e.target.value) || 0;
                         const newItems = [...items];
-                        newItems[index].totalSets = parseInt(e.target.value) || 0;
+                        newItems[index].totalSets = Math.max(1, val);
                         setItems(newItems);
                       }}
                       className="w-full h-9 text-center font-bold text-sm border-gray-200"

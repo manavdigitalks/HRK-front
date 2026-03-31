@@ -116,11 +116,11 @@ function SortableSizeRow({
 
 export function SizeMaster() {
   const dispatch = useAppDispatch();
-  const { listItems, loading, pagination } = useAppSelector((state) => state.sizeMaster);
+  const { listItems, pagination } = useAppSelector((state) => state.sizeMaster);
   const [isOpen, setIsOpen] = useState(false);
   const [editingSize, setEditingSize] = useState<any>(null);
   const [formData, setFormData] = useState({ name: "", description: "" });
-  const [search, setSearch] = useState("");
+  const [search] = useState("");
   const [orderItems, setOrderItems] = useState<any[]>([]);
   const [isSavingOrder, setIsSavingOrder] = useState(false);
 
@@ -136,9 +136,7 @@ export function SizeMaster() {
     setOrderItems(listItems);
   }, [listItems]);
 
-  const handlePageChange = (page: number) => {
-    dispatch(fetchAllSizeMasters({ page, limit: 10, search }));
-  };
+
 
   const handleAdd = () => {
     setEditingSize(null);
@@ -153,6 +151,11 @@ export function SizeMaster() {
   };
 
   const handleSave = async () => {
+    if (!formData.name.trim()) {
+      toast.error("Size name is required");
+      return;
+    }
+
     try {
       if (editingSize) {
         await dispatch(updateSizeMaster({ id: editingSize._id, data: formData })).unwrap();

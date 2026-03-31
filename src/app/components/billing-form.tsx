@@ -8,7 +8,7 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Badge } from "./ui/badge";
 import { toast } from "sonner";
-import { Save, Scan, Receipt, ChevronDown, ChevronUp, Trash2, ArrowLeft, UserPlus, PackageSearch } from "lucide-react";
+import { Scan, Receipt, ChevronDown, ChevronUp, Trash2, ArrowLeft, UserPlus, PackageSearch } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Switch } from "./ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "./ui/dialog";
@@ -126,6 +126,7 @@ export function BillingForm({ id }: { id?: string }) {
         setSavingCustomer(true);
         try {
             const created = await dispatch(createCustomer(newCustomer)).unwrap();
+            await dispatch(fetchCustomerDropdown("")).unwrap(); // Refresh dropdown list
             setSelectedCustomer(created._id);
             setAddCustomerOpen(false);
             toast.success("Customer added!");
@@ -439,11 +440,11 @@ export function BillingForm({ id }: { id?: string }) {
                             <div className="flex justify-between"><span>Subtotal</span><span className="font-bold">₹{subtotal.toLocaleString()}</span></div>
                             <div className="flex items-center justify-between gap-4">
                                 <span>Discount %</span>
-                                <Input type="number" className="h-8 w-16 text-center" value={discount} onChange={(e) => setDiscount(+e.target.value)} />
+                                <Input type="number" min={0} className="h-8 w-16 text-center" value={discount} onChange={(e) => setDiscount(Math.max(0, +e.target.value))} />
                             </div>
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2"><span>GST</span><Switch checked={gstEnabled} onCheckedChange={setGstEnabled} /></div>
-                                <Input type="number" className="h-8 w-16 text-center" value={gstPercent} onChange={(e) => setGstPercent(+e.target.value)} disabled={!gstEnabled} />
+                                <Input type="number" min={0} className="h-8 w-16 text-center" value={gstPercent} onChange={(e) => setGstPercent(Math.max(0, +e.target.value))} disabled={!gstEnabled} />
                             </div>
                         </div>
                         <div className="pt-4 border-t flex justify-between items-baseline"><span className="text-xs font-bold text-gray-400 uppercase">Grand Total</span><span className="text-3xl font-bold text-indigo-600">₹{total.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span></div>
@@ -458,7 +459,17 @@ export function BillingForm({ id }: { id?: string }) {
                     <DialogHeader><DialogTitle>Add Customer</DialogTitle></DialogHeader>
                     <div className="space-y-4 py-4">
                         <div className="space-y-1"><Label>Name</Label><Input value={newCustomer.name} onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })} /></div>
-                        <div className="space-y-1"><Label>Number</Label><Input value={newCustomer.number} onChange={(e) => setNewCustomer({ ...newCustomer, number: e.target.value })} /></div>
+                        <div className="space-y-1">
+                            <Label>Number</Label>
+                            <Input 
+                                value={newCustomer.number} 
+                                placeholder="10-digit number"
+                                onChange={(e) => {
+                                    const val = e.target.value.replace(/\D/g, "").slice(0, 10);
+                                    setNewCustomer({ ...newCustomer, number: val });
+                                }} 
+                            />
+                        </div>
                     </div>
                     <DialogFooter><Button onClick={handleAddCustomer} className="bg-indigo-600 text-white" disabled={savingCustomer}>{savingCustomer ? "Wait..." : "Save Customer"}</Button></DialogFooter>
                 </DialogContent>

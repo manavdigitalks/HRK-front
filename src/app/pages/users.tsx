@@ -40,6 +40,28 @@ export function Users() {
   };
 
   const handleSave = async () => {
+    // Validation
+    if (!formData.fullName.trim()) {
+      toast.error("Full name is required");
+      return;
+    }
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!formData.email.trim() || !emailRegex.test(formData.email)) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+
+    if (!editingUser && (!formData.password || formData.password.length < 6)) {
+      toast.error("Password must be at least 6 characters long");
+      return;
+    }
+
+    if (editingUser && formData.password && formData.password.length < 6) {
+      toast.error("Password must be at least 6 characters long");
+      return;
+    }
+
     try {
       if (editingUser) {
         const updateData: any = { fullName: formData.fullName, email: formData.email, status: formData.status };

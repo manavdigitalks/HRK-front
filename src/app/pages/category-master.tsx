@@ -39,6 +39,11 @@ export function CategoryMaster() {
   };
 
   const handleSave = async () => {
+    if (!formData.name.trim()) {
+      toast.error("Category name is required");
+      return;
+    }
+
     try {
       if (editingCategory) {
         await dispatch(updateCategoryMaster({ id: editingCategory._id, data: formData })).unwrap();
