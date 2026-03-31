@@ -110,11 +110,16 @@ export function Customers() {
 
   const handleSave = async () => {
     try {
+      const data = { 
+        ...formData, 
+        transport: formData.transport || null 
+      };
+
       if (editingCustomer) {
-        await dispatch(updateCustomer({ id: editingCustomer._id, data: formData })).unwrap();
+        await dispatch(updateCustomer({ id: editingCustomer._id, data })).unwrap();
         toast.success("Customer updated!");
       } else {
-        await dispatch(createCustomer(formData)).unwrap();
+        await dispatch(createCustomer(data)).unwrap();
         toast.success("Customer added!");
       }
       

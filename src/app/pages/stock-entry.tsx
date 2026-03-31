@@ -135,7 +135,7 @@ export function StockEntry() {
   };
 
   const handleSave = async () => {
-    if (!formData.product || (!formData.totalSets && formData.partialSets.length === 0) || !formData.supplier || !formData.invoiceNumber) {
+    if (!formData.product || (!formData.totalSets && formData.partialSets.length === 0) || !formData.supplier) {
       toast.error("Please fill all required fields");
       return;
     }

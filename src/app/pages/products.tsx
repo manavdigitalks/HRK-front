@@ -102,6 +102,11 @@ export function Products() {
       return;
     }
 
+    if (selectedSizes.length === 0) {
+      toast.error("Please select at least one size");
+      return;
+    }
+
     try {
       const data = { ...formData, sizes: selectedSizes };
       if (editingProduct) {
