@@ -262,16 +262,19 @@ export function BillingForm({ id }: { id?: string }) {
     const handleSave = async () => {
         if (!selectedCustomer) { toast.error("Choose customer"); return; }
         if (items.length === 0) { toast.error("Add items"); return; }
-        setLoading(true);
-
         const flattened = items.flatMap(g => g.barcodes.map((b: any) => ({
             product: g.productId, productName: g.productName, barcode: b.barcode, sequenceNumber: b.sequenceNumber,
             qty: b.qty, soldSizes: b.soldSizes, originalQty: b.originalQty, price: g.price, total: b.qty * g.price
         })));
 
         for (const item of flattened) {
-            if (!item.soldSizes?.length) { toast.error(`Select sizes for ID: ${item.sequenceNumber}`); return; }
+            if (!item.soldSizes?.length) { 
+                toast.error(`Select sizes for ID: ${item.sequenceNumber}`); 
+                return; 
+            }
         }
+
+        setLoading(true);
 
         try {
             const billingData = {
