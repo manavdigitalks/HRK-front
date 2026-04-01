@@ -3,6 +3,8 @@ import React, { useEffect, useState } from "react";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { fetchCustomerDropdown, createCustomer } from "@/redux/slices/customerSlice";
 import { scanBarcode, createBilling, updateBilling, fetchBillingById, fetchReservedItems } from "@/redux/slices/billingSlice";
+import { fetchMyStaffDropdown } from "@/redux/slices/myStaffSlice";
+import { Textarea } from "./ui/textarea";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -18,6 +20,7 @@ export function BillingForm({ id }: { id?: string }) {
     const router = useRouter();
     const dispatch = useAppDispatch();
     const { dropdownItems: customers } = useAppSelector((state) => state.customer);
+    const { dropdownItems: staffItems } = useAppSelector((state) => state.myStaff);
 
     const customerOptions = [
         { label: "Walk-in Customer", value: "walk-in" },
@@ -27,9 +30,14 @@ export function BillingForm({ id }: { id?: string }) {
         }))
     ];
 
+    const staffOptions = staffItems.map((s: any) => ({ label: s.name, value: s._id }));
+
     const [items, setItems] = useState<any[]>([]);
     const [selectedCustomer, setSelectedCustomer] = useState("");
     const [barcodeInput, setBarcodeInput] = useState("");
+    const [remarks, setRemarks] = useState("");
+    const [packedBy, setPackedBy] = useState("");
+    const [checkedBy, setCheckedBy] = useState("");
     const inputRef = React.useRef<HTMLInputElement>(null);
     const [discount, setDiscount] = useState(0);
     const [gstEnabled, setGstEnabled] = useState(true);
@@ -50,6 +58,7 @@ export function BillingForm({ id }: { id?: string }) {
 
     useEffect(() => {
         dispatch(fetchCustomerDropdown(""));
+        dispatch(fetchMyStaffDropdown(""));
         if (id) {
             setLoading(true);
             dispatch(fetchBillingById(id)).unwrap().then((bill: any) => {
@@ -83,6 +92,9 @@ export function BillingForm({ id }: { id?: string }) {
                 setGstEnabled(bill.gstEnabled || false);
                 setGstPercent(bill.gstPercent || 0);
                 setDiscount(bill.discountPercent || 0);
+                setRemarks(bill.remarks || "");
+                setPackedBy(bill.packedBy?._id || bill.packedBy || "");
+                setCheckedBy(bill.checkedBy?._id || bill.checkedBy || "");
 
                 // Load existing reservations from the bill
                 if (bill.fulfilledReservations?.length) {
@@ -265,7 +277,8 @@ export function BillingForm({ id }: { id?: string }) {
             const billingData = {
                 customer: selectedCustomer === "walk-in" ? null : selectedCustomer,
                 items: flattened, subtotal, discountPercent: discount,
-                gstEnabled, gstPercent, totalAmount: total, fulfilledReservationIds: selectedReservations
+                gstEnabled, gstPercent, totalAmount: total, fulfilledReservationIds: selectedReservations,
+                remarks, packedBy: packedBy || null, checkedBy: checkedBy || null
             };
 
             if (id) {
@@ -450,6 +463,29 @@ export function BillingForm({ id }: { id?: string }) {
                                 <Input type="number" min={0} className="h-8 w-16 text-center" value={gstPercent} onChange={(e) => setGstPercent(Math.max(0, +e.target.value))} disabled={!gstEnabled} />
                             </div>
                         </div>
+
+                        <div className="space-y-4 pt-4 border-t">
+                            <div className="space-y-2">
+                                <Label className="text-[10px] font-bold uppercase text-gray-400">Remarks</Label>
+                                <Textarea 
+                                    placeholder="Add any special instructions or remarks..." 
+                                    className="min-h-16 text-xs resize-none"
+                                    value={remarks}
+                                    onChange={(e) => setRemarks(e.target.value)}
+                                />
+                            </div>
+                            <div className="grid grid-cols-1 gap-3">
+                                <div className="space-y-1.5">
+                                    <Label className="text-[10px] font-bold uppercase text-gray-400">Packed By</Label>
+                                    <Combobox options={staffOptions} value={packedBy} onChange={setPackedBy} placeholder="Select name..." className="w-full h-9" onSearchChange={(v) => dispatch(fetchMyStaffDropdown(v))} />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <Label className="text-[10px] font-bold uppercase text-gray-400">Checked By</Label>
+                                    <Combobox options={staffOptions} value={checkedBy} onChange={setCheckedBy} placeholder="Select name..." className="w-full h-9" onSearchChange={(v) => dispatch(fetchMyStaffDropdown(v))} />
+                                </div>
+                            </div>
+                        </div>
+
                         <div className="pt-4 border-t flex justify-between items-baseline"><span className="text-xs font-bold text-gray-400 uppercase">Grand Total</span><span className="text-3xl font-bold text-indigo-600">₹{total.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span></div>
                         <div className="bg-gray-50 p-4 rounded text-center"><span className="text-[10px] font-bold text-gray-400 uppercase block">Total Barcodes</span><span className="text-2xl font-bold">{items.reduce((s, g) => s + g.barcodes.length, 0)}</span></div>
                         <Button onClick={handleSave} className="w-full h-12 bg-indigo-600 font-bold text-white rounded" disabled={loading}>

@@ -12,6 +12,7 @@ import transportMasterReducer from './slices/transportMasterSlice';
 import stockEntryReducer from './slices/stockEntrySlice';
 import supplierReducer from './slices/supplierSlice';
 import orderBookingReducer from './slices/orderBookingSlice';
+import myStaffReducer from './slices/myStaffSlice';
 
 
 export const store = configureStore({
@@ -29,6 +30,7 @@ export const store = configureStore({
     transportMaster: transportMasterReducer,
     stockEntry: stockEntryReducer,
     orderBooking: orderBookingReducer,
+    myStaff: myStaffReducer,
   },
 });
 
