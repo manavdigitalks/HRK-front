@@ -75,7 +75,7 @@ export const scanBarcode = createAsyncThunk('billing/scan', async ({ barcode, cu
 });
 
 export const fetchReservedItems = createAsyncThunk('billing/fetchReserved', async (customerId: string) => {
-  const response = await api.get(`/order-booking/all`, { params: { customerId, status: "Hold" } });
+  const response = await api.get(`/order-booking/all`, { params: { customerId, status: "Hold", limit: 1000 } });
   return response.data.data;
 });
 

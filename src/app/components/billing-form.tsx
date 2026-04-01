@@ -354,46 +354,48 @@ export function BillingForm({ id }: { id?: string }) {
                                 </p>
                                 <Badge className="bg-amber-200 text-amber-900 border-amber-300 hover:bg-amber-200">{reservedItems.length} Reserved</Badge>
                             </div>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                                {reservedItems.map((b, idx) => {
-                                    const selected = selectedReservations.includes(b._id);
-                                    return (
-                                        <div
-                                            key={idx}
-                                            onClick={() => setSelectedReservations(prev => selected ? prev.filter(i => i !== b._id) : [...prev, b._id])}
-                                            className={`relative p-3 rounded-xl border transition-all duration-200 cursor-pointer overflow-hidden ${selected
-                                                    ? "bg-amber-100 border-amber-400 shadow-sm ring-1 ring-amber-400"
-                                                    : "bg-white border-gray-200 opacity-60 hover:opacity-100 hover:border-amber-200"
-                                                }`}
-                                        >
-                                            {selected && (
-                                                <div className="absolute top-1 right-1 bg-amber-600 rounded-full p-0.5">
-                                                    <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" />
-                                                    </svg>
+                            <div className="max-h-[350px] overflow-y-auto custom-scrollbar pr-2 pt-1 pb-1">
+                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                                    {reservedItems.map((b, idx) => {
+                                        const selected = selectedReservations.includes(b._id);
+                                        return (
+                                            <div
+                                                key={idx}
+                                                onClick={() => setSelectedReservations(prev => selected ? prev.filter(i => i !== b._id) : [...prev, b._id])}
+                                                className={`relative p-3 rounded-xl border transition-all duration-200 cursor-pointer overflow-hidden ${selected
+                                                        ? "bg-amber-100 border-amber-400 shadow-sm ring-1 ring-amber-400"
+                                                        : "bg-white border-gray-200 opacity-60 hover:opacity-100 hover:border-amber-200"
+                                                    }`}
+                                            >
+                                                {selected && (
+                                                    <div className="absolute top-1 right-1 bg-amber-600 rounded-full p-0.5">
+                                                        <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" />
+                                                        </svg>
+                                                    </div>
+                                                )}
+                                                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter mb-1">order form</div>
+                                                <div className="flex justify-between items-center gap-2">
+                                                    <span className={`font-bold truncate ${selected ? "text-amber-900" : "text-gray-900"}`}>{b.product?.productCode}</span>
+                                                    <Badge className={`${selected ? "bg-amber-600" : "bg-gray-200"} text-white text-[10px] h-5 px-1.5`}>{b.totalSets}S</Badge>
                                                 </div>
-                                            )}
-                                            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter mb-1">order form</div>
-                                            <div className="flex justify-between items-center gap-2">
-                                                <span className={`font-bold truncate ${selected ? "text-amber-900" : "text-gray-900"}`}>{b.product?.productCode}</span>
-                                                <Badge className={`${selected ? "bg-amber-600" : "bg-gray-200"} text-white text-[10px] h-5 px-1.5`}>{b.totalSets}S</Badge>
+                                                <div className="mt-1.5 flex flex-wrap gap-1">
+                                                    {b.product?.sizes?.map((s: any, sIdx: number) => (
+                                                        <span
+                                                            key={sIdx}
+                                                            className={`px-1 rounded-[4px] text-[8px] font-bold border ${selected
+                                                                    ? "bg-amber-200 border-amber-300 text-amber-900"
+                                                                    : "bg-gray-100 border-gray-200 text-gray-400"
+                                                                }`}
+                                                        >
+                                                            {s.name}
+                                                        </span>
+                                                    ))}
+                                                </div>
                                             </div>
-                                            <div className="mt-1.5 flex flex-wrap gap-1">
-                                                {b.product?.sizes?.map((s: any, sIdx: number) => (
-                                                    <span
-                                                        key={sIdx}
-                                                        className={`px-1 rounded-[4px] text-[8px] font-bold border ${selected
-                                                                ? "bg-amber-200 border-amber-300 text-amber-900"
-                                                                : "bg-gray-100 border-gray-200 text-gray-400"
-                                                            }`}
-                                                    >
-                                                        {s.name}
-                                                    </span>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
+                                        );
+                                    })}
+                                </div>
                             </div>
                         </div>
                     )}
