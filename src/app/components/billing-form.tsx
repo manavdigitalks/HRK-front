@@ -32,8 +32,8 @@ export function BillingForm({ id }: { id?: string }) {
     const [barcodeInput, setBarcodeInput] = useState("");
     const inputRef = React.useRef<HTMLInputElement>(null);
     const [discount, setDiscount] = useState(0);
-    const [gstEnabled, setGstEnabled] = useState(false);
-    const [gstPercent, setGstPercent] = useState(18);
+    const [gstEnabled, setGstEnabled] = useState(true);
+    const [gstPercent, setGstPercent] = useState(5);
     const [loading, setLoading] = useState(false);
     const [addCustomerOpen, setAddCustomerOpen] = useState(false);
     const [newCustomer, setNewCustomer] = useState({ name: "", number: "" });
