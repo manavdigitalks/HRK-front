@@ -3,7 +3,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
-import { Plus, User } from "lucide-react";
+import { Plus, User, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
 import { toast } from "sonner";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
@@ -33,6 +33,7 @@ export function Customers() {
     transport: ""
   });
   const [search, setSearch] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
   const sanitizePhone = (phone: string) => {
     if (!phone) return "";
@@ -109,6 +110,7 @@ export function Customers() {
   };
 
   const handleSave = async () => {
+    setIsSaving(true);
     try {
       const data = { 
         ...formData, 
@@ -132,6 +134,8 @@ export function Customers() {
       dispatch(fetchAllCustomers({ page: pagination?.currentPage || 1, limit: 10, search }));
     } catch (err: any) {
       toast.error(err.message || "Failed to save customer");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -249,9 +253,16 @@ export function Customers() {
               />
             </div>
             <div className="col-span-2 pt-4">
-                <Button onClick={handleSave} className="w-full bg-indigo-600 hover:bg-indigo-700 h-12 font-bold uppercase tracking-widest text-[11px]">
-                  Save
-                </Button>
+                 <Button onClick={handleSave} className="w-full bg-indigo-600 hover:bg-indigo-700 h-12 font-bold uppercase tracking-widest text-[11px]" disabled={isSaving}>
+                   {isSaving ? (
+                     <>
+                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                       Saving...
+                     </>
+                   ) : (
+                     "Save"
+                   )}
+                 </Button>
             </div>
           </div>
         </DialogContent>

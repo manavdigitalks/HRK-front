@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
-import { Plus, UserCircle } from "lucide-react";
+import { Plus, UserCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
 import { Badge } from "../components/ui/badge";
@@ -18,6 +18,7 @@ export function Users() {
   const [editingUser, setEditingUser] = useState<any>(null);
   const [formData, setFormData] = useState({ fullName: "", email: "", password: "", status: "active" });
   const [search, setSearch] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     dispatch(fetchAllStaffs({ page: 1, limit: 10, search }));
@@ -62,6 +63,7 @@ export function Users() {
       return;
     }
 
+    setIsSaving(true);
     try {
       if (editingUser) {
         const updateData: any = { fullName: formData.fullName, email: formData.email, status: formData.status };
@@ -76,6 +78,8 @@ export function Users() {
       dispatch(fetchAllStaffs({ page: pagination?.currentPage || 1, limit: 10, search }));
     } catch (err: any) {
       toast.error(err.message || "Failed to save user");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -149,8 +153,15 @@ export function Users() {
               <Label>Password {editingUser && "(leave blank to keep current)"}</Label>
               <Input type="password" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} />
             </div>
-            <Button onClick={handleSave} className="w-full bg-indigo-600 hover:bg-indigo-700">
-              {editingUser ? "Update" : "Create"} User
+            <Button onClick={handleSave} className="w-full bg-indigo-600 hover:bg-indigo-700" disabled={isSaving}>
+              {isSaving ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  {editingUser ? "Updating..." : "Creating..."}
+                </>
+              ) : (
+                <>{editingUser ? "Update" : "Create"} User</>
+              )}
             </Button>
           </div>
         </DialogContent>

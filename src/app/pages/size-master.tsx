@@ -3,7 +3,7 @@ import { useEffect, useState, useRef } from "react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
-import { Plus, GripVertical, Edit, Trash2 } from "lucide-react";
+import { Plus, GripVertical, Edit, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
@@ -123,6 +123,7 @@ export function SizeMaster() {
   const [search] = useState("");
   const [orderItems, setOrderItems] = useState<any[]>([]);
   const [isSavingOrder, setIsSavingOrder] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     dispatch(fetchAllSizeMasters({ page: 1, limit: 10, search }));
@@ -156,6 +157,7 @@ export function SizeMaster() {
       return;
     }
 
+    setIsSaving(true);
     try {
       if (editingSize) {
         await dispatch(updateSizeMaster({ id: editingSize._id, data: formData })).unwrap();
@@ -169,6 +171,8 @@ export function SizeMaster() {
       dispatch(fetchSizeMasterList());
     } catch (err: any) {
       toast.error(err.message || "Failed to save size");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -232,7 +236,14 @@ export function SizeMaster() {
               className="bg-indigo-600 hover:bg-indigo-700"
               disabled={isSavingOrder || orderItems.length === 0}
             >
-              {isSavingOrder ? "Saving..." : "Save Order"}
+              {isSavingOrder ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save Order"
+              )}
             </Button>
           </div>
         </div>
@@ -281,8 +292,15 @@ export function SizeMaster() {
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               />
             </div>
-            <Button onClick={handleSave} className="w-full bg-indigo-600 hover:bg-indigo-700">
-              {editingSize ? "Update" : "Add"} Size
+            <Button onClick={handleSave} className="w-full bg-indigo-600 hover:bg-indigo-700" disabled={isSaving}>
+              {isSaving ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>{editingSize ? "Update" : "Add"} Size</>
+              )}
             </Button>
           </div>
         </DialogContent>

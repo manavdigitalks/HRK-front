@@ -10,7 +10,7 @@ import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger } from "../components/ui/tabs";
-import { Plus, Eye, Printer, Trash2, Edit, Download } from "lucide-react";
+import { Plus, Eye, Printer, Trash2, Edit, Download, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { CommonDataTable } from "../components/ui/common-data-table";
 import { Badge } from "../components/ui/badge";
@@ -45,6 +45,7 @@ export function Products() {
   });
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [search, setSearch] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     dispatch(fetchAllProducts({ page: 1, limit: 10, search }));
@@ -102,10 +103,7 @@ export function Products() {
       return;
     }
 
-    if (formData.purchasePrice <= 0) {
-      toast.error("Purchase price must be greater than zero");
-      return;
-    }
+
 
     if (formData.salePrice <= 0) {
       toast.error("Sale price must be greater than zero");
@@ -117,6 +115,7 @@ export function Products() {
       return;
     }
 
+    setIsSaving(true);
     try {
       const data = { ...formData, sizes: selectedSizes };
       if (editingProduct) {
@@ -130,6 +129,8 @@ export function Products() {
       dispatch(fetchAllProducts({ page: pagination.currentPage, limit: 10, search }));
     } catch (err: any) {
       toast.error(err.message || "Failed to save product");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -301,7 +302,16 @@ export function Products() {
           
           <DialogFooter>
              <Button variant="outline" onClick={() => setIsOpen(false)}>Cancel</Button>
-             <Button onClick={handleSave} className="bg-indigo-600 text-white">Save Product</Button>
+             <Button onClick={handleSave} className="bg-indigo-600 text-white" disabled={isSaving}>
+               {isSaving ? (
+                 <>
+                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                   Saving...
+                 </>
+               ) : (
+                 "Save Product"
+               )}
+             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

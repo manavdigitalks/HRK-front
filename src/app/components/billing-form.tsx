@@ -8,7 +8,7 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Badge } from "./ui/badge";
 import { toast } from "sonner";
-import { Scan, Receipt, ChevronDown, ChevronUp, Trash2, ArrowLeft, UserPlus, PackageSearch } from "lucide-react";
+import { Scan, Receipt, ChevronDown, ChevronUp, Trash2, ArrowLeft, UserPlus, PackageSearch, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Switch } from "./ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "./ui/dialog";
@@ -250,6 +250,7 @@ export function BillingForm({ id }: { id?: string }) {
     const handleSave = async () => {
         if (!selectedCustomer) { toast.error("Choose customer"); return; }
         if (items.length === 0) { toast.error("Add items"); return; }
+        setLoading(true);
 
         const flattened = items.flatMap(g => g.barcodes.map((b: any) => ({
             product: g.productId, productName: g.productName, barcode: b.barcode, sequenceNumber: b.sequenceNumber,
@@ -279,6 +280,8 @@ export function BillingForm({ id }: { id?: string }) {
             }
         } catch (err: any) {
             toast.error(typeof err === 'string' ? err : (err.message || "Failed to save record"));
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -449,7 +452,16 @@ export function BillingForm({ id }: { id?: string }) {
                         </div>
                         <div className="pt-4 border-t flex justify-between items-baseline"><span className="text-xs font-bold text-gray-400 uppercase">Grand Total</span><span className="text-3xl font-bold text-indigo-600">₹{total.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span></div>
                         <div className="bg-gray-50 p-4 rounded text-center"><span className="text-[10px] font-bold text-gray-400 uppercase block">Total Barcodes</span><span className="text-2xl font-bold">{items.reduce((s, g) => s + g.barcodes.length, 0)}</span></div>
-                        <Button onClick={handleSave} className="w-full h-12 bg-indigo-600 font-bold text-white rounded">Save Record</Button>
+                        <Button onClick={handleSave} className="w-full h-12 bg-indigo-600 font-bold text-white rounded" disabled={loading}>
+                            {loading ? (
+                                <>
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    Saving...
+                                </>
+                            ) : (
+                                "Save Record"
+                            )}
+                        </Button>
                     </div>
                 </div>
             </div>

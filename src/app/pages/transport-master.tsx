@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
-import { Plus } from "lucide-react";
+import { Plus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
@@ -17,6 +17,7 @@ export function TransportMaster() {
   const [editingTransport, setEditingTransport] = useState<any>(null);
   const [formData, setFormData] = useState({ name: "" });
   const [search, setSearch] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     dispatch(fetchAllTransportMasters({ page: 1, limit: 10, search }));
@@ -44,6 +45,7 @@ export function TransportMaster() {
       return;
     }
 
+    setIsSaving(true);
     try {
       if (editingTransport) {
         await dispatch(updateTransportMaster({ id: editingTransport._id, data: formData })).unwrap();
@@ -56,6 +58,8 @@ export function TransportMaster() {
       dispatch(fetchAllTransportMasters({ page: pagination.currentPage, limit: 10, search }));
     } catch (err: any) {
       toast.error(err.message || "Failed to save transport");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -114,8 +118,15 @@ export function TransportMaster() {
                 onChange={(e) => setFormData({ name: e.target.value })}
               />
             </div>
-            <Button onClick={handleSave} className="w-full bg-indigo-600 hover:bg-indigo-700">
-              {editingTransport ? "Update" : "Add"} Transport
+            <Button onClick={handleSave} className="w-full bg-indigo-600 hover:bg-indigo-700" disabled={isSaving}>
+              {isSaving ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>{editingTransport ? "Update" : "Add"} Transport</>
+              )}
             </Button>
           </div>
         </DialogContent>

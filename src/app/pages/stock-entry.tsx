@@ -8,7 +8,7 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../components/ui/dialog";
-import { Plus, Trash2, Eye, Download, Printer, CheckCircle } from "lucide-react";
+import { Plus, Trash2, Eye, Download, Printer, CheckCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { CommonDataTable } from "../components/ui/common-data-table";
 import { Badge } from "../components/ui/badge";
@@ -48,7 +48,7 @@ export function StockEntry() {
   const [viewLoading, setViewLoading] = useState(false);
   const [formData, setFormData] = useState<any>(emptyForm());
   const [selectedProductDetails, setSelectedProductDetails] = useState<any>(null);
-
+  const [isSaving, setIsSaving] = useState(false);
   const [search, setSearch] = useState("");
 
   useEffect(() => {
@@ -139,6 +139,7 @@ export function StockEntry() {
       toast.error("Please fill all required fields");
       return;
     }
+    setIsSaving(true);
     try {
       const result = await dispatch(createStockEntry(formData)).unwrap();
       toast.success("Stock entry created successfully!", { duration: 4000 });
@@ -150,6 +151,8 @@ export function StockEntry() {
       dispatch(fetchAllStockEntries({ page: 1, limit: 10 }));
     } catch (err: any) {
       toast.error(err.message || "Failed to create stock entry");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -323,7 +326,16 @@ export function StockEntry() {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsOpen(false)}>Cancel</Button>
-            <Button onClick={handleSave} className="bg-indigo-600 text-white font-bold">Save Stock Entry</Button>
+             <Button onClick={handleSave} className="bg-indigo-600 text-white font-bold" disabled={isSaving}>
+               {isSaving ? (
+                 <>
+                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                   Saving...
+                 </>
+               ) : (
+                 "Save Stock Entry"
+               )}
+             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

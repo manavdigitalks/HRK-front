@@ -93,12 +93,28 @@ const productSlice = createSlice({
       .addCase(fetchProductById.fulfilled, (state, action) => {
         state.currentProduct = action.payload;
       })
+      .addCase(createProduct.pending, (state) => {
+        state.loading = true;
+      })
       .addCase(createProduct.fulfilled, (state, action) => {
+        state.loading = false;
         state.products.unshift(action.payload);
       })
+      .addCase(createProduct.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message || 'Failed to create product';
+      })
+      .addCase(updateProduct.pending, (state) => {
+        state.loading = true;
+      })
       .addCase(updateProduct.fulfilled, (state, action) => {
+        state.loading = false;
         const index = state.products.findIndex((p) => p._id === action.payload._id);
         if (index !== -1) state.products[index] = action.payload;
+      })
+      .addCase(updateProduct.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message || 'Failed to update product';
       })
       .addCase(deleteProduct.fulfilled, (state, action) => {
         state.products = state.products.filter((p) => p._id !== action.payload);

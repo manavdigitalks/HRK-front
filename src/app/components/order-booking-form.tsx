@@ -8,7 +8,7 @@ import { Button } from "./ui/button";
 import { Label } from "./ui/label";
 import { Input } from "./ui/input";
 import { toast } from "sonner";
-import { Save, ArrowLeft, Plus, Trash2 } from "lucide-react";
+import { Save, ArrowLeft, Plus, Trash2, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Combobox } from "./ui/combobox";
 
@@ -99,8 +99,14 @@ export function OrderBookingForm({ id, initialData }: { id?: string; initialData
             size="sm"
             className="bg-indigo-600 hover:bg-indigo-700 shadow-sm shadow-indigo-200 px-6 font-bold h-9 transition-all active:scale-95"
           >
-            {loading ? "Processing..." : (id ? "Update Reservation" : "Confirm Booking")}
-            <Save className="w-4 h-4 ml-2" />
+            {loading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+                <>
+                    {id ? "Update Reservation" : "Confirm Booking"}
+                    <Save className="w-4 h-4 ml-2" />
+                </>
+            )}
           </Button>
         </div>
       </div>

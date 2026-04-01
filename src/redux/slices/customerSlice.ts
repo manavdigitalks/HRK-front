@@ -93,12 +93,28 @@ const customerSlice = createSlice({
       .addCase(fetchCustomerById.fulfilled, (state, action) => {
         state.currentCustomer = action.payload;
       })
+      .addCase(createCustomer.pending, (state) => {
+        state.loading = true;
+      })
       .addCase(createCustomer.fulfilled, (state, action) => {
+        state.loading = false;
         state.customers.unshift(action.payload);
       })
+      .addCase(createCustomer.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message || 'Failed to create customer';
+      })
+      .addCase(updateCustomer.pending, (state) => {
+        state.loading = true;
+      })
       .addCase(updateCustomer.fulfilled, (state, action) => {
+        state.loading = false;
         const index = state.customers.findIndex((c) => c._id === action.payload._id);
         if (index !== -1) state.customers[index] = action.payload;
+      })
+      .addCase(updateCustomer.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message || 'Failed to update customer';
       })
       .addCase(deleteCustomer.fulfilled, (state, action) => {
         state.customers = state.customers.filter((c) => c._id !== action.payload);

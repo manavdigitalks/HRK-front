@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
-import { Plus, User } from "lucide-react";
+import { Plus, User, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
 import { toast } from "sonner";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
@@ -24,6 +24,7 @@ export function Suppliers() {
     state: "",
   });
   const [search, setSearch] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
   const sanitizePhone = (phone: string) => {
     if (!phone) return "";
@@ -70,6 +71,7 @@ export function Suppliers() {
       return;
     }
 
+    setIsSaving(true);
     try {
       if (editingSupplier) {
         await dispatch(updateSupplier({ id: editingSupplier._id, data: formData })).unwrap();
@@ -82,6 +84,8 @@ export function Suppliers() {
       dispatch(fetchAllSuppliers({ page: pagination?.currentPage || 1, limit: 10, search }));
     } catch (err: any) {
       toast.error(err.message || "Failed to save supplier");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -170,9 +174,16 @@ export function Suppliers() {
               <Input placeholder="e.g. Maharashtra" value={formData.state} onChange={(e) => setFormData({...formData, state: e.target.value})} />
             </div>
             <div className="col-span-2 pt-4">
-                <Button onClick={handleSave} className="w-full bg-indigo-600 hover:bg-indigo-700 h-12 font-bold uppercase tracking-widest text-[11px]">
-                  Save
-                </Button>
+                 <Button onClick={handleSave} className="w-full bg-indigo-600 hover:bg-indigo-700 h-12 font-bold uppercase tracking-widest text-[11px]" disabled={isSaving}>
+                   {isSaving ? (
+                     <>
+                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                       Saving...
+                     </>
+                   ) : (
+                     "Save"
+                   )}
+                 </Button>
             </div>
           </div>
         </DialogContent>
