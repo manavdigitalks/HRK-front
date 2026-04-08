@@ -50,6 +50,7 @@ export function BillingForm({ id }: { id?: string }) {
     const [selectedReservations, setSelectedReservations] = useState<string[]>([]);
     const [autoScanEnabled, setAutoScanEnabled] = useState(true);
     const [isScanning, setIsScanning] = useState(false);
+    const [showPrice, setShowPrice] = useState(true);
 
     useEffect(() => {
         if (!addCustomerOpen) {
@@ -96,6 +97,7 @@ export function BillingForm({ id }: { id?: string }) {
                 setRemarks(bill.remarks || "");
                 setPackedBy(bill.packedBy?._id || bill.packedBy || "");
                 setCheckedBy(bill.checkedBy?._id || bill.checkedBy || "");
+                setShowPrice(bill.showPrice !== undefined ? bill.showPrice : true);
 
                 // Load existing reservations from the bill
                 if (bill.fulfilledReservations?.length) {
@@ -308,7 +310,8 @@ export function BillingForm({ id }: { id?: string }) {
                 customer: selectedCustomer === "walk-in" ? null : selectedCustomer,
                 items: flattened, subtotal, discountPercent: discount,
                 gstEnabled, gstPercent, totalAmount: total, fulfilledReservationIds: selectedReservations,
-                remarks, packedBy: packedBy || null, checkedBy: checkedBy || null
+                remarks, packedBy: packedBy || null, checkedBy: checkedBy || null,
+                showPrice
             };
 
             if (id) {
@@ -339,6 +342,12 @@ export function BillingForm({ id }: { id?: string }) {
                         <h1 className="text-2xl font-bold text-gray-900">{id ? "Edit Packing Slip" : "Add Packing Slip"}</h1>
                         <p className="text-gray-500 text-sm">Scan and manage dispatch</p>
                     </div>
+                </div>
+                <div className="flex items-center gap-3 bg-indigo-50 px-4 py-2 rounded-full border border-indigo-100">
+                    <span className={`text-xs font-bold uppercase ${showPrice ? "text-indigo-600" : "text-gray-400"}`}>
+                        {showPrice ? "Price Shown in PDF" : "Price Hidden in PDF"}
+                    </span>
+                    <Switch checked={showPrice} onCheckedChange={setShowPrice} />
                 </div>
             </div>
 
