@@ -19,8 +19,8 @@ import { Combobox } from "./ui/combobox";
 export function BillingForm({ id }: { id?: string }) {
     const router = useRouter();
     const dispatch = useAppDispatch();
-    const { dropdownItems: customers } = useAppSelector((state) => state.customer);
-    const { dropdownItems: staffItems } = useAppSelector((state) => state.myStaff);
+    const { dropdownItems: customers = [] } = useAppSelector((state) => state.customer);
+    const { dropdownItems: staffItems = [] } = useAppSelector((state) => state.myStaff);
 
     const customerOptions = [
         { label: "Walk-in Customer", value: "walk-in" },
@@ -51,6 +51,8 @@ export function BillingForm({ id }: { id?: string }) {
     const [autoScanEnabled, setAutoScanEnabled] = useState(true);
     const [isScanning, setIsScanning] = useState(false);
     const [showPrice, setShowPrice] = useState(true);
+    const { user } = useAppSelector((state) => state.auth);
+    const isStaff = user?.role === "staff";
 
     useEffect(() => {
         if (!addCustomerOpen) {
@@ -124,7 +126,7 @@ export function BillingForm({ id }: { id?: string }) {
                     fetched.forEach((i: any) => map.set(i._id, i));
                     return Array.from(map.values());
                 });
-                
+
                 // If this is a new bill (no 'id'), select all by default
                 if (!id) {
                     setSelectedReservations(fetched.map((i: any) => i._id));
@@ -162,9 +164,9 @@ export function BillingForm({ id }: { id?: string }) {
             setIsScanning(true);
             // Check if already in current list to avoid unnecessary API calls
             // Check both barcode string and sequence number
-            const alreadyAdded = items.some(g => 
-                g.barcodes.some((b: any) => 
-                    String(b.barcode).toLowerCase() === normalizedInput.toLowerCase() || 
+            const alreadyAdded = items.some(g =>
+                g.barcodes.some((b: any) =>
+                    String(b.barcode).toLowerCase() === normalizedInput.toLowerCase() ||
                     String(b.sequenceNumber) === normalizedInput
                 )
             );
@@ -201,7 +203,7 @@ export function BillingForm({ id }: { id?: string }) {
             const existingGroup = items.find(i => i.productId === result.productId);
             if ((existingGroup?.barcodes.length || 0) >= (result.availableQuota || Infinity)) {
                 toast.error(`Availability Limit for ${result.productName}.`);
-                setBarcodeInput(""); 
+                setBarcodeInput("");
                 setIsScanning(false);
                 return;
             }
@@ -248,13 +250,13 @@ export function BillingForm({ id }: { id?: string }) {
     }, [barcodeInput, handleScan, autoScanEnabled]);
 
     const toggleExpand = (productId: string) => {
-        setItems(prev => prev.map(item => 
+        setItems(prev => prev.map(item =>
             item.productId === productId ? { ...item, isExpanded: !item.isExpanded } : item
         ));
     };
 
     const removeGroup = (productId: string) => setItems(prev => prev.filter((item) => item.productId !== productId));
-    
+
     const removeBarcode = (productId: string, barcode: string) => setItems(prev => prev.map(group => {
         if (group.productId === productId) return { ...group, barcodes: group.barcodes.filter((b: any) => b.barcode !== barcode) };
         return group;
@@ -269,8 +271,8 @@ export function BillingForm({ id }: { id?: string }) {
                         barcodes: group.barcodes.map((b: any) => {
                             if (b.barcode !== barcode) return b;
                             const currentSold = b.soldSizes || [];
-                            const newSold = currentSold.includes(sizeId) 
-                                ? currentSold.filter((id: string) => id !== sizeId) 
+                            const newSold = currentSold.includes(sizeId)
+                                ? currentSold.filter((id: string) => id !== sizeId)
                                 : [...currentSold, sizeId];
                             return { ...b, soldSizes: newSold, qty: newSold.length };
                         })
@@ -297,9 +299,9 @@ export function BillingForm({ id }: { id?: string }) {
         })));
 
         for (const item of flattened) {
-            if (!item.soldSizes?.length) { 
-                toast.error(`Select sizes for ID: ${item.sequenceNumber}`); 
-                return; 
+            if (!item.soldSizes?.length) {
+                toast.error(`Select sizes for ID: ${item.sequenceNumber}`);
+                return;
             }
         }
 
@@ -370,13 +372,13 @@ export function BillingForm({ id }: { id?: string }) {
                                 </div>
                             </div>
                             <div className="flex gap-2">
-                                <Input 
+                                <Input
                                     ref={inputRef}
                                     placeholder="Scan Job Card or Barcode..."
                                     className="h-11 text-lg font-bold border-indigo-200 focus:ring-indigo-500"
-                                    value={barcodeInput} 
-                                    onChange={(e) => setBarcodeInput(e.target.value)} 
-                                    onKeyDown={(e) => e.key === 'Enter' && handleScan()} 
+                                    value={barcodeInput}
+                                    onChange={(e) => setBarcodeInput(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleScan()}
                                     autoFocus
                                 />
                                 <Button onClick={handleScan} className="bg-indigo-600 h-11 text-white hover:bg-indigo-700 px-6"><Scan className="w-4 h-4 mr-2" /> Scan</Button>
@@ -402,8 +404,8 @@ export function BillingForm({ id }: { id?: string }) {
                                                 key={idx}
                                                 onClick={() => setSelectedReservations(prev => selected ? prev.filter(i => i !== b._id) : [...prev, b._id])}
                                                 className={`relative p-3 rounded-xl border transition-all duration-200 cursor-pointer overflow-hidden ${selected
-                                                        ? "bg-amber-100 border-amber-400 shadow-sm ring-1 ring-amber-400"
-                                                        : "bg-white border-gray-200 opacity-60 hover:opacity-100 hover:border-amber-200"
+                                                    ? "bg-amber-100 border-amber-400 shadow-sm ring-1 ring-amber-400"
+                                                    : "bg-white border-gray-200 opacity-60 hover:opacity-100 hover:border-amber-200"
                                                     }`}
                                             >
                                                 {selected && (
@@ -423,8 +425,8 @@ export function BillingForm({ id }: { id?: string }) {
                                                         <span
                                                             key={sIdx}
                                                             className={`px-1 rounded-[4px] text-[8px] font-bold border ${selected
-                                                                    ? "bg-amber-200 border-amber-300 text-amber-900"
-                                                                    : "bg-gray-100 border-gray-200 text-gray-400"
+                                                                ? "bg-amber-200 border-amber-300 text-amber-900"
+                                                                : "bg-gray-100 border-gray-200 text-gray-400"
                                                                 }`}
                                                         >
                                                             {s.name}
@@ -442,7 +444,14 @@ export function BillingForm({ id }: { id?: string }) {
                     <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
                         <table className="w-full text-sm">
                             <thead className="bg-gray-50 border-b font-bold text-gray-600">
-                                <tr><th className="p-3 w-10">#</th><th className="p-3 text-left">Product</th><th className="p-3 text-center">Rate</th><th className="p-3 text-center">Sets</th><th className="p-3 text-center">Total</th><th className="p-3 text-right"></th></tr>
+                                <tr>
+                                    <th className="p-3 w-10">#</th>
+                                    <th className="p-3 text-left">Product</th>
+                                    {!isStaff && <th className="p-3 text-center">Rate</th>}
+                                    <th className="p-3 text-center">Sets</th>
+                                    {!isStaff && <th className="p-3 text-center">Total</th>}
+                                    <th className="p-3 text-right"></th>
+                                </tr>
                             </thead>
                             <tbody className="divide-y">
                                 {items.length === 0 ? <tr><td colSpan={6} className="p-20 text-center text-gray-300 font-bold"><Receipt className="w-10 h-10 mx-auto mb-2 opacity-30" /> No products scanned</td></tr> : items.map((g, i) => (
@@ -453,9 +462,9 @@ export function BillingForm({ id }: { id?: string }) {
                                                 <button onClick={() => toggleExpand(g.productId)}>{g.isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</button>
                                                 {g.productName}
                                             </td>
-                                            <td className="p-3 text-center">₹{g.price}</td>
+                                            {!isStaff && <td className="p-3 text-center">₹{g.price}</td>}
                                             <td className="p-3 text-center"><Badge variant="outline">{g.barcodes.length} Sets</Badge></td>
-                                            <td className="p-3 text-center font-bold text-indigo-700">₹{g.barcodes.reduce((s: number, b: any) => s + (b.qty * g.price), 0).toLocaleString()}</td>
+                                            {!isStaff && <td className="p-3 text-center font-bold text-indigo-700">₹{g.barcodes.reduce((s: number, b: any) => s + (b.qty * g.price), 0).toLocaleString()}</td>}
                                             <td className="p-3 text-right"><Button variant="ghost" size="icon" className="text-red-300" onClick={() => removeGroup(g.productId)}><Trash2 size={16} /></Button></td>
                                         </tr>
                                         {g.isExpanded && (
@@ -466,8 +475,12 @@ export function BillingForm({ id }: { id?: string }) {
                                                             <div className="grid grid-cols-4 items-center bg-white p-3 rounded border border-gray-100 shadow-sm transition-all hover:border-indigo-200">
                                                                 <span className="font-bold text-indigo-600">ID: {b.sequenceNumber}</span>
                                                                 <div className="text-center"><Badge className="bg-indigo-50 text-indigo-600 border-indigo-100">{b.qty} PCS</Badge></div>
-                                                                <div className="text-center text-gray-400">₹{g.price}</div>
-                                                                <div className="flex items-center justify-between font-bold">₹{(b.qty * g.price).toLocaleString()}<Button variant="ghost" size="icon" className="h-6 w-6 text-red-200" onClick={() => removeBarcode(g.productId, b.barcode)}><Trash2 size={14} /></Button></div>
+                                                                {!isStaff && <div className="text-center text-gray-400">₹{g.price}</div>}
+                                                                {!isStaff ? (
+                                                                    <div className="flex items-center justify-between font-bold">₹{(b.qty * g.price).toLocaleString()}<Button variant="ghost" size="icon" className="h-6 w-6 text-red-200" onClick={() => removeBarcode(g.productId, b.barcode)}><Trash2 size={14} /></Button></div>
+                                                                ) : (
+                                                                    <div className="flex items-center justify-end"><Button variant="ghost" size="icon" className="h-6 w-6 text-red-200" onClick={() => removeBarcode(g.productId, b.barcode)}><Trash2 size={14} /></Button></div>
+                                                                )}
                                                             </div>
                                                             <div className="bg-indigo-50/20 p-3 rounded border border-indigo-50 ml-6">
                                                                 <span className="text-[10px] font-bold text-indigo-400 uppercase block mb-2">Select Sizes to Dispatch:</span>
@@ -493,8 +506,9 @@ export function BillingForm({ id }: { id?: string }) {
                 <div className="lg:col-span-1 space-y-6">
                     <div className="bg-white p-6 rounded-lg border shadow-sm sticky top-6 space-y-4">
                         <h3 className="font-bold text-gray-900 border-b pb-2">Order Summary</h3>
-                        <div className="space-y-3 text-sm">
-                            <div className="flex justify-between"><span>Subtotal</span><span className="font-bold">₹{subtotal.toLocaleString()}</span></div>
+
+                        <div className="space-y-3 text-sm border-b pb-4">
+                            {/* <div className="flex justify-between"><span>Subtotal</span><span className="font-bold">₹{subtotal.toLocaleString()}</span></div> */}
                             <div className="flex items-center justify-between gap-4">
                                 <span>Discount %</span>
                                 <Input type="number" min={0} className="h-8 w-16 text-center" value={discount} onChange={(e) => setDiscount(Math.max(0, +e.target.value))} />
@@ -505,11 +519,12 @@ export function BillingForm({ id }: { id?: string }) {
                             </div>
                         </div>
 
-                        <div className="space-y-4 pt-4 border-t">
+
+                        <div className="space-y-4">
                             <div className="space-y-2">
                                 <Label className="text-[10px] font-bold uppercase text-gray-400">Remarks</Label>
-                                <Textarea 
-                                    placeholder="Add any special instructions or remarks..." 
+                                <Textarea
+                                    placeholder="Add any special instructions or remarks..."
                                     className="min-h-16 text-xs resize-none"
                                     value={remarks}
                                     onChange={(e) => setRemarks(e.target.value)}
@@ -527,7 +542,9 @@ export function BillingForm({ id }: { id?: string }) {
                             </div>
                         </div>
 
-                        <div className="pt-4 border-t flex justify-between items-baseline"><span className="text-xs font-bold text-gray-400 uppercase">Grand Total</span><span className="text-3xl font-bold text-indigo-600">₹{total.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span></div>
+                        {!isStaff && (
+                            <div className="pt-4 border-t flex justify-between items-baseline"><span className="text-xs font-bold text-gray-400 uppercase">Grand Total</span><span className="text-3xl font-bold text-indigo-600">₹{total.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span></div>
+                        )}
                         <div className="bg-gray-50 p-4 rounded text-center"><span className="text-[10px] font-bold text-gray-400 uppercase block">Total Barcodes</span><span className="text-2xl font-bold">{items.reduce((s, g) => s + g.barcodes.length, 0)}</span></div>
                         <Button onClick={handleSave} className="w-full h-12 bg-indigo-600 font-bold text-white rounded" disabled={loading}>
                             {loading ? (
@@ -550,13 +567,13 @@ export function BillingForm({ id }: { id?: string }) {
                         <div className="space-y-1"><Label>Name</Label><Input value={newCustomer.name} onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })} /></div>
                         <div className="space-y-1">
                             <Label>Number</Label>
-                            <Input 
-                                value={newCustomer.number} 
+                            <Input
+                                value={newCustomer.number}
                                 placeholder="10-digit number"
                                 onChange={(e) => {
                                     const val = e.target.value.replace(/\D/g, "").slice(0, 10);
                                     setNewCustomer({ ...newCustomer, number: val });
-                                }} 
+                                }}
                             />
                         </div>
                     </div>

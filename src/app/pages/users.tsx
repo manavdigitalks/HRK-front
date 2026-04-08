@@ -16,7 +16,7 @@ export function Users() {
   const { staffs, loading, pagination } = useAppSelector((state) => state.staff);
   const [isOpen, setIsOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
-  const [formData, setFormData] = useState({ fullName: "", email: "", password: "", status: "active" });
+  const [formData, setFormData] = useState({ fullName: "", email: "", password: "", status: "active", role: "staff" });
   const [search, setSearch] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
@@ -30,13 +30,13 @@ export function Users() {
 
   const handleAdd = () => {
     setEditingUser(null);
-    setFormData({ fullName: "", email: "", password: "", status: "active" });
+    setFormData({ fullName: "", email: "", password: "", status: "active", role: "staff" });
     setIsOpen(true);
   };
 
   const handleEdit = (user: any) => {
     setEditingUser(user);
-    setFormData({ fullName: user.fullName, email: user.email, password: "", status: user.status });
+    setFormData({ fullName: user.fullName, email: user.email, password: "", status: user.status, role: user.role || "staff" });
     setIsOpen(true);
   };
 
@@ -66,7 +66,7 @@ export function Users() {
     setIsSaving(true);
     try {
       if (editingUser) {
-        const updateData: any = { fullName: formData.fullName, email: formData.email, status: formData.status };
+        const updateData: any = { fullName: formData.fullName, email: formData.email, status: formData.status, role: formData.role };
         if (formData.password) updateData.password = formData.password;
         await dispatch(updateStaff({ id: editingUser._id, data: updateData })).unwrap();
         toast.success("User updated!");
@@ -107,6 +107,9 @@ export function Users() {
     { header: "Email", accessorKey: "email" },
     { header: "Status", accessorKey: "status", cell: (item: any) => (
       <Badge variant={item.status === "active" ? "default" : "secondary"}>{item.status}</Badge>
+    )},
+    { header: "Role", accessorKey: "role", cell: (item: any) => (
+      <Badge variant={item.role === "admin" ? "default" : "outline"} className={item.role === "admin" ? "bg-purple-100 text-purple-700" : ""}>{item.role || "staff"}</Badge>
     )},
   ];
 
@@ -152,6 +155,17 @@ export function Users() {
             <div className="space-y-2">
               <Label>Password {editingUser && "(leave blank to keep current)"}</Label>
               <Input type="password" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} />
+            </div>
+            <div className="space-y-2">
+              <Label>Role</Label>
+              <select 
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                value={formData.role} 
+                onChange={(e) => setFormData({...formData, role: e.target.value})}
+              >
+                <option value="admin">Admin</option>
+                <option value="staff">Staff</option>
+              </select>
             </div>
             <Button onClick={handleSave} className="w-full bg-indigo-600 hover:bg-indigo-700" disabled={isSaving}>
               {isSaving ? (

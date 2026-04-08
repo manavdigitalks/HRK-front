@@ -15,6 +15,8 @@ function BillingContent() {
   const searchParams = useSearchParams();
   const dispatch = useAppDispatch();
   const { billings, loading, pagination } = useAppSelector((state) => state.billing);
+  const { user } = useAppSelector((state) => state.auth);
+  const isStaff = user?.role === "staff";
   const [search, setSearch] = useState("");
 
   const printId = searchParams.get("id");
@@ -120,6 +122,8 @@ function BillingContent() {
     },
   ];
 
+  const filteredColumns = columns.filter(col => !(isStaff && col.header === "Amount"));
+
   return (
     <div className="p-4 lg:p-6 space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -135,7 +139,7 @@ function BillingContent() {
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden p-6">
         <CommonDataTable
-          columns={columns}
+          columns={filteredColumns}
           data={billings}
           pagination={pagination || { totalRecords: 0, currentPage: 1, totalPages: 0, limit: 10 }}
           onPageChange={handlePageChange}

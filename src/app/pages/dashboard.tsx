@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
+import { useAppSelector } from "@/redux/hooks";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { ShoppingCart, DollarSign, Users, Package, ArrowUp, ArrowDown } from "lucide-react";
 import api from "@/lib/axios";
@@ -12,6 +13,7 @@ const iconMap: Record<string, any> = {
 };
 
 export function Dashboard() {
+  const { user } = useAppSelector((state) => state.auth);
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -38,7 +40,8 @@ export function Dashboard() {
     );
   }
 
-  const stats = data?.stats || [];
+  const isStaff = user?.role === "staff";
+  const stats = (data?.stats || []).filter((s: any) => !(isStaff && (s.title === "Today's Sales" || s.title === "Today Sales")));
   const recentSales = data?.recentSales || [];
 
   return (
