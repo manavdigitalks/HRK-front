@@ -49,6 +49,7 @@ export function BillingForm({ id }: { id?: string }) {
     const [reservedItems, setReservedItems] = useState<any[]>([]);
     const [selectedReservations, setSelectedReservations] = useState<string[]>([]);
     const [autoScanEnabled, setAutoScanEnabled] = useState(true);
+    const [isScanning, setIsScanning] = useState(false);
 
     useEffect(() => {
         if (!addCustomerOpen) {
@@ -146,26 +147,48 @@ export function BillingForm({ id }: { id?: string }) {
     };
 
     const handleScan = React.useCallback(async () => {
-        if (!barcodeInput) return;
+        if (!barcodeInput || isScanning) return;
         if (!selectedCustomer) {
             toast.error("Please select a customer first");
             inputRef.current?.focus();
             return;
         }
+
+        const normalizedInput = barcodeInput.trim();
+
         try {
+            setIsScanning(true);
             // Check if already in current list to avoid unnecessary API calls
-            const alreadyAdded = items.flatMap(g => g.barcodes.map((b: any) => b.barcode)).includes(barcodeInput);
+            // Check both barcode string and sequence number
+            const alreadyAdded = items.some(g => 
+                g.barcodes.some((b: any) => 
+                    String(b.barcode).toLowerCase() === normalizedInput.toLowerCase() || 
+                    String(b.sequenceNumber) === normalizedInput
+                )
+            );
+
             if (alreadyAdded) {
-                toast.warning("Already added");
+                toast.warning("Already added to the list");
                 setBarcodeInput("");
+                setIsScanning(false);
                 return;
             }
 
+            // Fetch the barcode info from backend
             const result = await dispatch(scanBarcode({
-                barcode: barcodeInput,
+                barcode: normalizedInput,
                 customerId: selectedCustomer,
                 selectedReservations: selectedReservations,
             })).unwrap();
+
+            // Double check result barcode against current list in case they scanned sequence number
+            const barcodeExists = items.some(g => g.barcodes.some((b: any) => b.barcode === result.barcode));
+            if (barcodeExists) {
+                toast.warning("Already added");
+                setBarcodeInput("");
+                setIsScanning(false);
+                return;
+            }
 
             // Auto-select reservation if product matches an unselected one
             const matchingReservation = reservedItems.find(r => r.product?._id === result.productId);
@@ -174,9 +197,11 @@ export function BillingForm({ id }: { id?: string }) {
             }
 
             const existingGroup = items.find(i => i.productId === result.productId);
-            if ((existingGroup?.barcodes.length || 0) >= result.availableQuota) {
+            if ((existingGroup?.barcodes.length || 0) >= (result.availableQuota || Infinity)) {
                 toast.error(`Availability Limit for ${result.productName}.`);
-                setBarcodeInput(""); return;
+                setBarcodeInput(""); 
+                setIsScanning(false);
+                return;
             }
 
             const newBarcodeObj = {
@@ -205,8 +230,10 @@ export function BillingForm({ id }: { id?: string }) {
         } catch (err: any) {
             toast.error(typeof err === 'string' ? err : (err.message || "Error"));
             setBarcodeInput("");
+        } finally {
+            setIsScanning(false);
         }
-    }, [barcodeInput, selectedCustomer, selectedReservations, items, reservedItems, dispatch, inputRef]);
+    }, [barcodeInput, isScanning, selectedCustomer, selectedReservations, items, reservedItems, dispatch, inputRef]);
 
     // Auto-scan effect
     useEffect(() => {
