@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { fetchProductDropdown } from "@/redux/slices/productSlice";
 import { createStockEntry, fetchAllStockEntries, deleteStockEntry, fetchStockEntryInventory } from "@/redux/slices/stockEntrySlice";
@@ -8,20 +9,23 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../components/ui/dialog";
-import { Plus, Trash2, Eye, Download, Printer, CheckCircle, Loader2 } from "lucide-react";
+import { Plus, Trash2, Eye, Download, Printer, CheckCircle, Loader2, ClipboardList, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { CommonDataTable } from "../components/ui/common-data-table";
 import { Badge } from "../components/ui/badge";
 import { Barcode } from "../components/ui/barcode";
 import { printLabels, downloadLabelsPDF } from "@/lib/barcode-print-utils";
+import api from "@/lib/axios";
 
 const emptyForm = () => ({
   entryDate: new Date().toISOString().split('T')[0],
   supplier: "",
   invoiceNumber: "",
   product: "",
+  expectedSets: 0,
   totalSets: 0,
-  partialSets: [] as { sizes: string[] }[]
+  partialSets: [] as { sizes: string[] }[],
+  linkedPendingEntryId: ""
 });
 
 import { Combobox } from "../components/ui/combobox";
@@ -29,6 +33,7 @@ import { X } from "lucide-react";
 
 export function StockEntry() {
   const dispatch = useAppDispatch();
+  const router = useRouter();
   const { entries, loading, pagination } = useAppSelector((state) => state.stockEntry);
   const { dropdownItems: products } = useAppSelector((state) => state.product);
   const { dropdownOptions: suppliers } = useAppSelector((state) => state.supplier);
@@ -48,6 +53,8 @@ export function StockEntry() {
   const [viewLoading, setViewLoading] = useState(false);
   const [formData, setFormData] = useState<any>(emptyForm());
   const [selectedProductDetails, setSelectedProductDetails] = useState<any>(null);
+  const [pendingEntries, setPendingEntries] = useState<any[]>([]);
+  const [loadingPending, setLoadingPending] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -81,10 +88,34 @@ export function StockEntry() {
     setIsOpen(true);
   };
 
-  const handleProductChange = (productId: string) => {
+  const handleProductChange = async (productId: string) => {
     const product = products.find(p => p._id === productId);
     setSelectedProductDetails(product);
-    setFormData({ ...formData, product: productId, partialSets: [] });
+    setFormData({ ...formData, product: productId, partialSets: [], expectedSets: 0, totalSets: 0 });
+    setPendingEntries([]);
+    if (!productId) return;
+    setLoadingPending(true);
+    try {
+      const res = await api.get(`/report/pending-stock-by-product/${productId}`);
+      setPendingEntries(res.data.data || []);
+    } catch {
+      setPendingEntries([]);
+    } finally {
+      setLoadingPending(false);
+    }
+  };
+
+  const fillFromPendingEntry = (entry: any) => {
+    setFormData((prev: any) => ({
+      ...prev,
+      supplier: entry.supplier?._id || prev.supplier,
+      invoiceNumber: entry.invoiceNumber || prev.invoiceNumber,
+      expectedSets: entry.pendingQuantity,
+      totalSets: 0,
+      partialSets: [],
+      linkedPendingEntryId: entry._id
+    }));
+    toast.info(`${entry.pendingQuantity} sets pending load kiye — ab received sets daalo`);
   };
 
   const addPartialSetRow = () => {
@@ -106,6 +137,8 @@ export function StockEntry() {
     setFormData({ ...formData, partialSets: newPartialSets });
   };
 
+  const totalActualSets = formData.totalSets + formData.partialSets.length;
+  const pendingQty = Math.max(0, (formData.expectedSets || 0) - totalActualSets);
   const totalItemsCalculated = (formData.totalSets * (selectedProductDetails?.sizes?.length || 0)) + 
     formData.partialSets.reduce((acc: number, set: any) => acc + (set.sizes?.length || 0), 0);
 
@@ -187,7 +220,15 @@ export function StockEntry() {
       </div>
     )},
     { header: "Barcodes", accessorKey: "totalSets", cell: (item: any) => (
-      <Badge variant="secondary">{item.totalSets} Barcodes</Badge>
+      <div className="flex flex-col gap-1">
+        <Badge variant="secondary">{item.totalSets} Received</Badge>
+        {item.pendingQuantity > 0 && (
+          <Badge className="bg-amber-100 text-amber-700 border-amber-200">{item.pendingQuantity} Pending</Badge>
+        )}
+        {item.linkedPendingEntryId && (
+          <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-[9px]">↳ Linked Entry</Badge>
+        )}
+      </div>
     )},
     { header: "Barcode Range", accessorKey: "range", cell: (item: any) => (
       <span className="text-[11px] font-mono text-gray-500">#{item.startSequence} - #{item.endSequence}</span>
@@ -211,9 +252,14 @@ export function StockEntry() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Stock In</h1>
         </div>
-        <Button onClick={handleOpen} className="bg-indigo-600 hover:bg-indigo-700">
-          <Plus className="w-4 h-4 mr-2" /> Stock In
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={() => router.push("/stock-entry/pending-report")} variant="outline" className="border-amber-300 text-amber-700 hover:bg-amber-50">
+            <ClipboardList className="w-4 h-4 mr-2" /> Pending Report
+          </Button>
+          <Button onClick={handleOpen} className="bg-indigo-600 hover:bg-indigo-700">
+            <Plus className="w-4 h-4 mr-2" /> Stock In
+          </Button>
+        </div>
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden p-6 text-center">
@@ -277,10 +323,83 @@ export function StockEntry() {
               </div>
             )}
 
+            {loadingPending && (
+              <div className="flex items-center gap-2 text-xs text-gray-400 py-1">
+                <Loader2 className="w-3 h-3 animate-spin" /> Checking pending stock...
+              </div>
+            )}
+
+            {!loadingPending && pendingEntries.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-amber-500" />
+                  <span className="text-sm font-bold text-amber-700">
+                    {pendingEntries.length} pending {pendingEntries.length === 1 ? "entry" : "entries"} found for this product
+                  </span>
+                </div>
+                {pendingEntries.map((entry: any) => (
+                  <div key={entry._id} className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-bold text-gray-700">{entry.supplier?.name}</span>
+                        {entry.invoiceNumber && (
+                          <span className="text-[10px] text-gray-400 font-mono">Inv: {entry.invoiceNumber}</span>
+                        )}
+                        <span className="text-[10px] text-gray-400">{new Date(entry.entryDate).toLocaleDateString("en-GB")}</span>
+                      </div>
+                      <div className="flex items-center gap-3 mt-1">
+                        <span className="text-[11px] text-gray-500">Expected: <b>{entry.expectedSets}</b></span>
+                        <span className="text-[11px] text-gray-500">Received: <b className="text-green-600">{entry.totalSets}</b></span>
+                        <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-[10px] h-4 px-1.5">
+                          {entry.pendingQuantity} pending
+                        </Badge>
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="text-indigo-600 border-indigo-200 hover:bg-indigo-50 shrink-0 text-xs"
+                      onClick={() => fillFromPendingEntry(entry)}
+                    >
+                      + Add Stock
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Number of Full Sets</Label>
+                <Label>Expected Sets (from factory)</Label>
+                <Input type="number" min={0} value={formData.expectedSets} onChange={(e) => setFormData({...formData, expectedSets: Math.max(0, +e.target.value)})} placeholder="e.g. 100" />
+              </div>
+              <div className="space-y-2">
+                <Label>Number of Full Sets Received</Label>
                 <Input type="number" min={0} value={formData.totalSets} onChange={(e) => setFormData({...formData, totalSets: Math.max(0, +e.target.value)})} />
+              </div>
+            </div>
+
+            {formData.expectedSets > 0 && (
+              <div className={`p-3 rounded-md border flex items-center justify-between ${
+                pendingQty > 0 ? 'bg-amber-50 border-amber-200' : 'bg-green-50 border-green-200'
+              }`}>
+                <span className={`text-sm font-bold ${ pendingQty > 0 ? 'text-amber-700' : 'text-green-700' }`}>
+                  {pendingQty > 0 ? `⚠️ ${pendingQty} sets still pending from factory` : '✅ All expected sets received'}
+                </span>
+                <div className="text-xs text-gray-500">
+                  Expected: {formData.expectedSets} &nbsp;|&nbsp; Received: {totalActualSets}
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Number of Partial Sets</Label>
+                <div className="bg-gray-100 rounded-md p-3 flex flex-col justify-center">
+                  <span className="text-[10px] font-bold text-gray-400 uppercase">Partial Barcodes</span>
+                  <span className="text-xl font-bold">{formData.partialSets.length}</span>
+                </div>
               </div>
               <div className="bg-gray-100 rounded-md p-3 flex flex-col justify-center">
                 <span className="text-[10px] font-bold text-gray-400 uppercase">Total Items</span>
@@ -352,6 +471,20 @@ export function StockEntry() {
                   {viewData?.entry.supplier?.name} &nbsp;·&nbsp; {viewData && new Date(viewData.entry.entryDate).toLocaleDateString('en-GB')} &nbsp;·&nbsp;
                   Seq #{viewData?.entry.startSequence} – #{viewData?.entry.endSequence}
                 </p>
+                {viewData?.entry.pendingQuantity > 0 && (
+                  <div className="mt-2 inline-flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-700 text-xs font-bold px-3 py-1 rounded-full">
+                    ⚠️ {viewData.entry.pendingQuantity} sets pending from factory
+                    &nbsp;(Expected: {viewData.entry.expectedSets}, Received: {viewData.entry.totalSets})
+                  </div>
+                )}
+                {viewData?.entry.linkedPendingEntryId && (
+                  <div className="mt-2 inline-flex items-center gap-2 bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold px-3 py-1 rounded-full">
+                    ↳ Linked to entry: Inv {viewData.entry.linkedPendingEntryId.invoiceNumber || "N/A"}
+                    &nbsp;· Expected: {viewData.entry.linkedPendingEntryId.expectedSets}
+                    &nbsp;· Total Received: {viewData.entry.linkedPendingEntryId.totalSets}
+                    &nbsp;· Remaining: {viewData.entry.linkedPendingEntryId.pendingQuantity}
+                  </div>
+                )}
               </div>
               <div className="flex gap-2">
                 <Button onClick={handleDownloadPDF} variant="outline" size="sm"><Download className="w-4 h-4 mr-2" /> Download PDF</Button>
