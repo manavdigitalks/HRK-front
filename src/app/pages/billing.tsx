@@ -6,7 +6,7 @@ import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { fetchAllBillings, deleteBilling } from "@/redux/slices/billingSlice";
 import { CommonDataTable } from "../components/ui/common-data-table";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Edit, Trash2, Receipt, Download, Printer } from "lucide-react";
+import { Edit, Trash2, Receipt, Download, Printer, Loader2 } from "lucide-react";
 import api from "@/lib/axios";
 import { Suspense } from "react";
 
@@ -18,6 +18,7 @@ function BillingContent() {
   const { user } = useAppSelector((state) => state.auth);
   const isStaff = user?.role === "staff";
   const [search, setSearch] = useState("");
+  const [printingId, setPrintingId] = useState<string | null>(null);
 
   const printId = searchParams.get("id");
   const shouldPrint = searchParams.get("print");
@@ -53,6 +54,7 @@ function BillingContent() {
   };
 
   const handlePrintSlip = async (id: string) => {
+    setPrintingId(id);
     try {
       const response = await api.get(`/billing/${id}/packing-slip`, { responseType: "blob" });
       const url = window.URL.createObjectURL(new Blob([response.data], { type: "application/pdf" }));
@@ -64,15 +66,19 @@ function BillingContent() {
       
       iframe.onload = () => {
         if (iframe.contentWindow) {
+          iframe.contentWindow.print();
+          setPrintingId(null);
           iframe.contentWindow.onafterprint = () => {
             window.URL.revokeObjectURL(url);
             document.body.removeChild(iframe);
           };
-          iframe.contentWindow.print();
+        } else {
+          setPrintingId(null);
         }
       };
     } catch {
       toast.error("Failed to print packing slip");
+      setPrintingId(null);
     }
   };
 
@@ -105,8 +111,19 @@ function BillingContent() {
         accessorKey: "actions", 
         cell: (item: any) => (
             <div className="flex gap-2">
-                <Button variant="outline" size="icon" onClick={() => handlePrintSlip(item._id)} className="h-8 w-8 text-blue-600" title="Direct Print">
-                    <Printer className="w-4 h-4" />
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  onClick={() => handlePrintSlip(item._id)} 
+                  className="h-8 w-8 text-blue-600" 
+                  title="Direct Print"
+                  disabled={printingId === item._id}
+                >
+                    {printingId === item._id ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Printer className="w-4 h-4" />
+                    )}
                 </Button>
                 <Button variant="outline" size="icon" onClick={() => handleDownloadSlip(item._id, item.billNumber)} className="h-8 w-8 text-green-600" title="Download Packing Slip">
                     <Download className="w-4 h-4" />
