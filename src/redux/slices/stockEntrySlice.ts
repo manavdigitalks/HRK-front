@@ -71,6 +71,14 @@ export const markSizeLost = createAsyncThunk(
   }
 );
 
+export const fetchBarcodeHistory = createAsyncThunk(
+  'stockEntry/fetchBarcodeHistory',
+  async (id: string) => {
+    const response = await api.get(`/stock-entry/inventory/items/${id}/history`);
+    return response.data.data;
+  }
+);
+
 export const createStockEntry = createAsyncThunk('stockEntry/create', async (data: any) => {
   const response = await api.post('/stock-entry/create', data);
   return response.data;
