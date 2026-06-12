@@ -202,7 +202,10 @@ export function BillingForm({ id }: { id?: string }) {
             }
 
             const existingGroup = items.find(i => i.productId === result.productId);
-            if ((existingGroup?.barcodes.length || 0) >= (result.availableQuota || Infinity)) {
+            const fullSetBarcodes = existingGroup?.barcodes.filter((b: any) => b.originalQty >= (result.sizes?.length || 1)) || [];
+            const isScannedItemFullSet = (result.availableSizes?.length || result.sizes?.length || 1) >= (result.sizes?.length || 1);
+
+            if (isScannedItemFullSet && fullSetBarcodes.length >= (result.availableQuota || Infinity)) {
                 toast.error(`Availability Limit for ${result.productName}.`);
                 setBarcodeInput("");
                 setIsScanning(false);
