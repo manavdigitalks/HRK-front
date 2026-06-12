@@ -65,9 +65,9 @@ export const deleteBilling = createAsyncThunk('billing/delete', async (id: strin
   return id;
 });
 
-export const scanBarcode = createAsyncThunk('billing/scan', async ({ barcode, customerId, alreadyScanned, selectedReservations }: { barcode: string; customerId?: string; alreadyScanned?: number; selectedReservations?: string[] }, { rejectWithValue }) => {
+export const scanBarcode = createAsyncThunk('billing/scan', async ({ barcode, customerId, alreadyScanned, selectedReservations, billId }: { barcode: string; customerId?: string; alreadyScanned?: number; selectedReservations?: string[]; billId?: string }, { rejectWithValue }) => {
   try {
-    const response = await api.get(`/billing/scan/${barcode}`, { params: { customerId, alreadyScanned, selectedReservations } });
+    const response = await api.get(`/billing/scan/${barcode}`, { params: { customerId, alreadyScanned, selectedReservations, billId } });
     return response.data.data;
   } catch (err: any) {
     return rejectWithValue(err.response?.data?.message || err.message || 'Scan failed');

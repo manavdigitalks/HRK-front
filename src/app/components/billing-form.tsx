@@ -183,6 +183,7 @@ export function BillingForm({ id }: { id?: string }) {
                 barcode: normalizedInput,
                 customerId: selectedCustomer,
                 selectedReservations: selectedReservations,
+                billId: id,
             })).unwrap();
 
             // Double check result barcode against current list in case they scanned sequence number
