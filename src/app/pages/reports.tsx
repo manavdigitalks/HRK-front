@@ -84,25 +84,24 @@ export function Reports() {
     } catch {}
   };
 
-  const handleDownloadStock = () => {
+  const handleDownloadStock = async () => {
     if (!rows.length) return;
-    const headers = ["Design No", "SKU", "Category", ...sizes.map((s) => s.name)];
-    const csvRows = rows.map((r) =>
-      [
-        r.designNo,
-        r.sku,
-        r.category,
-        ...sizes.map((s) => (r.sizeCounts[s._id] === null ? "-" : r.sizeCounts[s._id])),
-      ].join(",")
-    );
-    const csv = [headers.join(","), ...csvRows].join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `stock-report-${new Date().toISOString().split("T")[0]}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    try {
+      const res = await api.get("/report/stock/export", {
+        params: { search },
+        responseType: "blob",
+      });
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: "text/csv" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `stock-report-${new Date().toISOString().split("T")[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch {
+      toast.error("Stock report download failed");
+    }
   };
 
   // Debounced search for Stock Report
@@ -151,21 +150,29 @@ export function Reports() {
     }
   };
 
-  const handleDownloadSales = () => {
+  const handleDownloadSales = async () => {
     if (!monthlySales.length) return;
-    const headers = ["Month", "Invoices Count", "Pieces Sold", "Revenue (INR)", "Avg Invoice Value (INR)"];
-    const csvRows = monthlySales.map((m) => {
-      const avg = Math.round(m.totalAmount / (m.billCount || 1));
-      return [m._id, m.billCount, m.totalQty, m.totalAmount, avg].join(",");
-    });
-    const csv = [headers.join(","), ...csvRows].join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `monthly-sales-report-${new Date().toISOString().split("T")[0]}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    try {
+      const res = await api.get("/report/sales/export", {
+        params: {
+          year: selectedYear,
+          startDate,
+          endDate,
+          customerId: selectedCustomer,
+        },
+        responseType: "blob",
+      });
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: "text/csv" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `monthly-sales-report-${new Date().toISOString().split("T")[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch {
+      toast.error("Sales report download failed");
+    }
   };
 
   // Trigger Sales Data fetch when filters change
@@ -180,11 +187,9 @@ export function Reports() {
   const [prodSalesLoading, setProdSalesLoading] = useState(false);
   const [productSales, setProductSales] = useState<any[]>([]);
   const [prodSearch, setProdSearch] = useState("");
-  const [selectedMonth, setSelectedMonth] = useState("");
 
   const fetchProductSales = async (
     searchVal?: string,
-    monthVal?: string,
     startVal?: string,
     endVal?: string,
     custVal?: string
@@ -194,7 +199,6 @@ export function Reports() {
       const res = await api.get("/report/product-sales", {
         params: {
           search: searchVal !== undefined ? searchVal : prodSearch,
-          month: monthVal !== undefined ? monthVal : selectedMonth,
           startDate: startVal !== undefined ? startVal : startDate,
           endDate: endVal !== undefined ? endVal : endDate,
           customerId: custVal !== undefined ? custVal : selectedCustomer
@@ -208,38 +212,39 @@ export function Reports() {
     }
   };
 
-  const handleDownloadProdSales = () => {
+  const handleDownloadProdSales = async () => {
     if (!productSales.length) return;
-    const headers = ["Design No", "Product Code", "SKU", "Category", "Pieces Sold", "Avg Price (INR)", "Revenue (INR)"];
-    const csvRows = productSales.map((p) =>
-      [
-        p.designNo,
-        p.productCode,
-        p.sku,
-        p.category,
-        p.totalQty,
-        Math.round(p.avgPrice),
-        p.totalRevenue
-      ].join(",")
-    );
-    const csv = [headers.join(","), ...csvRows].join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `product-dispatch-report-${new Date().toISOString().split("T")[0]}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    try {
+      const res = await api.get("/report/product-sales/export", {
+        params: {
+          search: prodSearch,
+          startDate,
+          endDate,
+          customerId: selectedCustomer,
+        },
+        responseType: "blob",
+      });
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: "text/csv" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `product-dispatch-report-${new Date().toISOString().split("T")[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch {
+      toast.error("Product dispatch report download failed");
+    }
   };
 
   // Debounced search and filters for Product Sales
   useEffect(() => {
     if (activeTab !== "product-sales") return;
     const timer = setTimeout(() => {
-      fetchProductSales(prodSearch, selectedMonth, startDate, endDate, selectedCustomer);
+      fetchProductSales(prodSearch, startDate, endDate, selectedCustomer);
     }, 500);
     return () => clearTimeout(timer);
-  }, [prodSearch, selectedMonth, startDate, endDate, selectedCustomer, activeTab]);
+  }, [prodSearch, startDate, endDate, selectedCustomer, activeTab]);
 
   // -------------------------------------------------------------
   // PENDING STOCK STATE & LOGIC (Merged Report)
@@ -264,28 +269,24 @@ export function Reports() {
     }
   };
 
-  const handleDownloadPendingSales = () => {
+  const handleDownloadPendingSales = async () => {
     if (!pendingData.length) return;
-    const headers = ["Date", "Supplier", "Invoice", "Product Code", "Expected Sets", "Received Sets", "Pending Sets"];
-    const csvRows = pendingData.map((e) =>
-      [
-        new Date(e.entryDate).toLocaleDateString("en-GB"),
-        e.supplier?.name || "-",
-        e.invoiceNumber || "-",
-        e.product?.productCode || "-",
-        e.expectedSets,
-        e.totalSets,
-        e.pendingQuantity
-      ].join(",")
-    );
-    const csv = [headers.join(","), ...csvRows].join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `pending-factory-orders-${new Date().toISOString().split("T")[0]}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    try {
+      const res = await api.get("/report/pending-stock/export", {
+        params: { search: pendingSearch },
+        responseType: "blob",
+      });
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: "text/csv" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `pending-factory-orders-${new Date().toISOString().split("T")[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch {
+      toast.error("Pending stock report download failed");
+    }
   };
 
   // Debounced search for Pending Stock Report
@@ -317,9 +318,6 @@ export function Reports() {
     }
   }, [activeTab]);
 
-  // Months available for product sales filter (extracted from monthly sales data)
-  const monthOptions = monthlySales.map((m) => m._id);
-
   const customerOptions = [
     { label: "All Customers", value: "" },
     ...customersList.map((c: any) => ({
@@ -336,11 +334,6 @@ export function Reports() {
     }),
   ];
 
-  const monthOptionsMapped = [
-    { label: "All Months", value: "" },
-    ...monthOptions.map((m) => ({ label: m, value: m })),
-  ];
-
   // Prepare chart data chronologically
   const chartData = [...monthlySales].reverse().map((item) => ({
     Month: item._id,
@@ -354,7 +347,6 @@ export function Reports() {
     setEndDate("");
     setSelectedCustomer("");
     setSelectedYear("");
-    setSelectedMonth("");
     toast.success("Filters cleared successfully");
   };
 
@@ -795,9 +787,9 @@ export function Reports() {
           ------------------------------------------------------------- */}
       {activeTab === "product-sales" && (
         <div className="space-y-6">
-          {/* Controls with customer, month and custom date ranges */}
+          {/* Controls with customer and custom date ranges */}
           <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col lg:flex-row lg:items-end justify-between gap-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 flex-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 flex-1">
               {/* Search */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-bold text-gray-500 uppercase">Search Product</label>
@@ -825,22 +817,6 @@ export function Reports() {
                 />
               </div>
 
-              {/* Month Selector */}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-gray-500 uppercase">Month</label>
-                <Combobox
-                  options={monthOptionsMapped}
-                  value={selectedMonth}
-                  onChange={(val) => {
-                    setSelectedMonth(val);
-                    setStartDate(""); // clear date range on monthly dropdown selection
-                    setEndDate("");
-                  }}
-                  placeholder="Select Month..."
-                  className="w-full text-xs"
-                />
-              </div>
-
               {/* Start Date */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-bold text-gray-500 uppercase">Start Date</label>
@@ -850,7 +826,6 @@ export function Reports() {
                   value={startDate}
                   onChange={(e) => {
                     setStartDate(e.target.value);
-                    setSelectedMonth(""); // clear month selection
                   }}
                 />
               </div>
@@ -864,14 +839,13 @@ export function Reports() {
                   value={endDate}
                   onChange={(e) => {
                     setEndDate(e.target.value);
-                    setSelectedMonth(""); // clear month selection
                   }}
                 />
               </div>
             </div>
 
             <div className="flex gap-2 shrink-0">
-              {(prodSearch || selectedMonth || startDate || endDate || selectedCustomer) && (
+              {(prodSearch || startDate || endDate || selectedCustomer) && (
                 <Button variant="ghost" size="sm" onClick={handleResetFilters} className="text-red-500 hover:text-red-700">
                   <X className="w-4 h-4 mr-1" /> Reset
                 </Button>
